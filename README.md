@@ -1,8 +1,3 @@
-Here is a professional, technically detailed README file for your project. It highlights the impressive Web Audio API synthesis work and the realistic UI simulation.
-
-***
-
-```markdown
 # Zoom Meeting Simulator
 
 A highly realistic, self-contained front-end simulation of a Zoom video conference meeting. Built entirely with vanilla HTML, CSS, and JavaScript—featuring a custom Web Audio API engine that synthesizes "bad-call" audio, ambient room noise, and UI sound effects with zero external audio files required.
