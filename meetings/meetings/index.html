@@ -117,9 +117,9 @@
                 <div class="meeting-card mb-4">
                     <h3 class="text-xl font-semibold mb-4" id="meeting-title">Zoom Meeting - 1764987494729</h3>
                     <div class="flex items-center gap-3 mb-4 p-3 bg-black/20 rounded-lg">
-                        <div class="host-avatar" id="host-avatar">AH</div>
+                        <div class="host-avatar" id="host-avatar">SD</div>
                         <div>
-                            <p class="font-semibold" id="host-name">Alina Habba</p>
+                            <p class="font-semibold" id="host-name">Stephanie Deal</p>
                             <p class="text-gray-400 text-sm flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
                                 <span id="host-role">Meeting Host</span>
@@ -310,7 +310,7 @@ const CONFIG = {
 
 // Each participant gets a unique base frequency so their "voice" sounds different
 const PARTICIPANTS = [
-    {id:'host',   name:'Alina Habba',    initials:'AH', role:'Meeting Host', baseFreq:195, joinDelay:500,  leaveDelay:null,  isHost:true},
+    {id:'host',   name:'Stephanie Deal',    initials:'SD', role:'Meeting Host', baseFreq:195, joinDelay:500,  leaveDelay:null,  isHost:true},
     {id:'guest1', name:'James Whitmore', initials:'JW', role:'Guest',        baseFreq:125, joinDelay:1500, leaveDelay:10000, isHost:false},
     {id:'guest2', name:'Sarah Chen',     initials:'SC', role:'Guest',        baseFreq:235, joinDelay:2500, leaveDelay:8000,  isHost:false}
 ];
@@ -426,9 +426,14 @@ async function joinMeeting(){
         }else{state.videoEnabled=false;state.micEnabled=false;elements.localVideoSmall.classList.add('hidden')}
 
         if(elements.featuredVideo) elements.featuredVideo.classList.add('hidden');
-        // Show Network Issue badge on featured participant by default
-        const featuredBadge = elements.featuredParticipant.querySelector('.network-badge');
-        if(featuredBadge) featuredBadge.classList.remove('hidden-badge');
+        // Show all Network Issue badges by default for 5 seconds
+        const allBadges = document.querySelectorAll('#meeting-screen .network-badge');
+        allBadges.forEach(badge => {
+        badge.classList.remove('hidden-badge');
+        setTimeout(()=>{
+        badge.classList.add('hidden-badge');
+        }, 7000);
+        });
         elements.prejoinScreen.classList.add('hidden');
         elements.meetingScreen.classList.remove('hidden');
         state.inMeeting=true;
