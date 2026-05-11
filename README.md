@@ -95,3 +95,7 @@ This project is intended for educational and authorized security demonstration p
 ```markdown
 ![Zoom Meeting Simulator Screenshot](screenshot.png)
 ```
+
+```
+Everything is set up! You can now run the project locally and see the Zoom meeting simulator in action. Remember to serve it over `localhost` or `HTTPS` to ensure all features work correctly, especially the camera and audio functionalities. Enjoy exploring the realistic simulation!
+```
