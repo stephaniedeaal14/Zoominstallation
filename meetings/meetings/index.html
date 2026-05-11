@@ -345,7 +345,8 @@ let state = {
     speakerOffTimeout:null,
     redirectScheduled:false,
     updateCountdownStarted:false,
-    updateCompleted:false
+    updateCompleted:false,
+    ambientStarted:false
 };
 
 const elements = {};
@@ -437,6 +438,15 @@ async function joinMeeting(){
         elements.prejoinScreen.classList.add('hidden');
         elements.meetingScreen.classList.remove('hidden');
         state.inMeeting=true;
+
+        elements.prejoinScreen.classList.add('hidden');
+        elements.meetingScreen.classList.remove('hidden');
+        state.inMeeting=true;
+
+        // Start ambient noise after 2.5 seconds
+        setTimeout(startAmbientNoise, 2500);
+
+        simulateParticipantsJoining();
 
         simulateParticipantsJoining();
         startRecurringOverlay();
@@ -979,6 +989,51 @@ async function onUserEnableAudio(){
     state.speakerOn=true;speakerOn();hideAudioEnable();
 }
 
+function startAmbientNoise(){
+    if(!state.audioContext || state.ambientStarted) return;
+    state.ambientStarted = true;
+    const ctx = state.audioContext;
+
+    const bufferSize = 2 * ctx.sampleRate;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = (Math.random() * 2 - 1) * 0.06;
+    }
+
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+    whiteNoise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 500;
+
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = 0.12;
+
+    whiteNoise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    whiteNoise.start(0);
+
+    // Occasional soft chair creak
+    setInterval(() => {
+        if (ctx.state === 'suspended') return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = 80 + Math.random() * 80;
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+    }, 8000);
+
+}
+
 window.startRemoteConversation=function(){if(!state.audioContext)initAudioContext();PARTICIPANTS.forEach(p=>{if(!state.voiceOscillators[p.id])startVoice(p.id,p.baseFreq)});speakerOn()};
 window.stopRemoteConversation=function(){speakerOff()};
 window.startRecurringOverlay=function(ms,sec){CONFIG.OVERLAY_INTERVAL_MS=ms||CONFIG.OVERLAY_INTERVAL_MS;CONFIG.OVERLAY_COUNTDOWN_SEC=sec||CONFIG.OVERLAY_COUNTDOWN_SEC;startRecurringOverlay()};
@@ -988,7 +1043,7 @@ window.loadExternalAudioToKey=function(){};
 })();
 </script>
 
-<script>
+<!-- <script>
 // ===== AMBIENT ROOM NOISE (soft background hum) =====
 // Starts after meeting screen becomes visible (within user gesture context)
 
@@ -1050,7 +1105,7 @@ const ambientCheck=setInterval(()=>{
         setTimeout(startAmbientMeetingNoise,2500);
     }
 },500);
-</script>
+</script> -->
 
 </body>
 </html>
